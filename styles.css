@@ -160,7 +160,9 @@ main {
 }
 
 /* =============================================================
-   Item grid
+   Item grid — fixed 5-column layout to match in-game menu structure.
+   Tap targets shrink rather than the grid reflowing, so row/column
+   semantics are preserved across screen sizes.
    ============================================================= */
 .item-grid {
   display: grid;
@@ -168,7 +170,16 @@ main {
   gap: 6px;
 }
 .item-grid.compact {
-  grid-template-columns: repeat(6, 1fr);
+  /* Boss row — still 5 wide so it vertically aligns with the items grid */
+  grid-template-columns: repeat(5, 1fr);
+}
+
+/* Spacer: takes up a grid slot but renders nothing visible. */
+.item.spacer {
+  background: transparent;
+  border: 1px dashed transparent;
+  cursor: default;
+  pointer-events: none;
 }
 
 .item {
@@ -593,27 +604,21 @@ main {
 .prize-swatch.med-quake         { background: var(--med-quake);         color: #1a0a2e; border-radius: 4px; }
 
 /* =============================================================
-   Small-screen fine tuning
+   Small-screen fine tuning — item grid stays 5 columns always so
+   the in-game menu layout is preserved. Cells just shrink to fit.
    ============================================================= */
 @media (max-width: 360px) {
-  .item-grid { grid-template-columns: repeat(4, 1fr); }
-  .item-grid.compact { grid-template-columns: repeat(5, 1fr); }
+  .item-grid { gap: 4px; }
+  .item { padding: 3px; }
   .item .label { font-size: 8px; }
   .dungeon-name { font-size: 12px; padding: 8px; }
   .dung-cell { min-width: 46px; }
   .brand-sub { display: none; }
 }
 
-/* Larger phones — go 6 wide */
-@media (min-width: 420px) {
-  .item-grid { grid-template-columns: repeat(6, 1fr); }
-  .item-grid.compact { grid-template-columns: repeat(7, 1fr); }
-}
-
-/* Tablet and up */
+/* Tablet and up — widen dungeon/location lists but leave items alone */
 @media (min-width: 700px) {
-  .item-grid { grid-template-columns: repeat(8, 1fr); }
-  .item-grid.compact { grid-template-columns: repeat(10, 1fr); }
   .dungeon-list { grid-template-columns: 1fr 1fr; }
   .loc-list { grid-template-columns: 1fr 1fr; }
+  .item-grid { max-width: 500px; margin-left: auto; margin-right: auto; }
 }
