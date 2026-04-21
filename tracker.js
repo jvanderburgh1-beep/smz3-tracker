@@ -128,17 +128,19 @@ function defaultState() {
     dungeons[id] = {
       chests: d.totalChests,
       boss:   false,
-      prize:  0,        // 0=unknown, 1=green, 2=red/blue, 3=crystal, 4=red crystal
+      prize:  0,        // cycles 0→1→2→4 on tap: 0=crystal (default), 1=green, 2=red/blue pendant, 4=red crystal 5/6
       medallion: 0,     // 0=unknown, 1=bombos, 2=ether, 3=quake
     };
   });
 
   const checked = {}; // checked[locId] = true
+  const smBossPrizes = {}; // smBossPrizes[bossId] = prize code (same scheme as dungeon prize)
 
   return {
     items,
     dungeons,
     checked,
+    smBossPrizes,
     settings: {
       mode: 'standard',
       glitches: false,
@@ -163,6 +165,7 @@ function loadState() {
       items:    { ...def.items, ...parsed.items },
       dungeons: mergeDungeons(def.dungeons, parsed.dungeons || {}),
       checked:  parsed.checked || {},
+      smBossPrizes: parsed.smBossPrizes || {},
       settings: { ...def.settings, ...(parsed.settings || {}) },
       v: 1,
     };
@@ -292,106 +295,218 @@ function renderItemGrid(hostId, catalog, isBoss = false) {
 
 /* ---------- Rendering: dungeons ---------- */
 
+// Mapping of dungeon id → boss sprite path (numbering follows the
+// crossproduct/mistersunshine convention: boss02..boss122).
+const DUNGEON_SPRITES = {
+  ep:  IMG_Z3 + 'boss02.png',   // Armos Knights
+  dp:  IMG_Z3 + 'boss12.png',   // Lanmolas
+  toh: IMG_Z3 + 'boss22.png',   // Moldorm
+  pod: IMG_Z3 + 'boss32.png',   // Helmasaur King
+  sp:  IMG_Z3 + 'boss42.png',   // Arrghus
+  sw:  IMG_Z3 + 'boss52.png',   // Mothula
+  tt:  IMG_Z3 + 'boss62.png',   // Blind
+  ip:  IMG_Z3 + 'boss72.png',   // Kholdstare
+  mm:  IMG_Z3 + 'boss82.png',   // Vitreous
+  tr:  IMG_Z3 + 'boss92.png',   // Trinexx
+  at:  IMG_Z3 + 'boss102.png',  // Agahnim (Castle Tower)
+  gt:  IMG_Z3 + 'boss122.png',  // Ganon (Ganon's Tower)
+  hc:  null,                    // Hyrule Castle (no boss, escape sequence only)
+};
+
+// Short labels shown below each cell and as fallback when sprite is missing.
+const DUNGEON_LABELS = {
+  ep: 'Eastern', dp: 'Desert',  toh: 'Hera',     hc: 'Castle',
+  at: 'Tower',   pod: 'Palace', sp: 'Swamp',     sw: 'Skull',
+  tt: 'Thieves', ip: 'Ice',     mm: 'Mire',      tr: 'Turtle',
+  gt: 'Ganon',
+};
+
+// Short names shown in fallback block (2 lines)
+const DUNGEON_FALLBACKS = {
+  ep: ['Eastern','Palace'],   dp: ['Desert','Palace'],   toh: ['Tower of','Hera'],
+  hc: ['Hyrule','Castle'],    at: ['Castle','Tower'],    pod: ['Palace of','Darkness'],
+  sp: ['Swamp','Palace'],     sw: ['Skull','Woods'],     tt: ['Thieves','Town'],
+  ip: ['Ice','Palace'],       mm: ['Misery','Mire'],     tr: ['Turtle','Rock'],
+  gt: ['Ganon\'s','Tower'],
+};
+
+// Cycle through prize values on each tap: 0 (crystal default) →
+// 1 (green) → 2 (red/blue pendant) → 4 (red crystal 5/6) → 0 (crystal) ...
+// Per user spec: crystal is default; no separate "unknown" state.
+const PRIZE_CYCLE = [0, 1, 2, 4];
+function nextPrize(current) {
+  const i = PRIZE_CYCLE.indexOf(current);
+  return PRIZE_CYCLE[(i + 1) % PRIZE_CYCLE.length];
+}
+
+// Medallion cycles: 0 (unknown) → 1 (bombos) → 2 (ether) → 3 (quake) → 0 ...
+function nextMed(current) { return ((current || 0) + 1) % 4; }
+
+function prizeGlyph(p) {
+  // 0 = crystal (default), 1 = green, 2 = red/blue pendant, 4 = red crystal
+  return { 0: '◇', 1: '◆', 2: '◆', 3: '◇', 4: '◇' }[p] || '◇';
+}
+function medGlyph(m) {
+  return ['?', 'B', 'E', 'Q'][m] || '?';
+}
+
 function renderDungeons() {
   const host = document.getElementById('z3-dungeons');
   host.innerHTML = '';
 
   Object.entries(ALL_DUNGEONS).forEach(([id, d]) => {
     const s = state.dungeons[id];
-    const row = document.createElement('div');
-    row.className = 'dungeon' + (d.hasMedallion ? ' has-medallion' : '');
-    row.dataset.id = id;
-
-    // Name
-    const name = document.createElement('div');
-    name.className = 'dungeon-name';
-    name.innerHTML = `${d.name}<span class="sub">${d.region}</span>`;
-    row.appendChild(name);
-
-    // Chests cell
-    if (d.totalChests > 0) {
-      const c = document.createElement('div');
-      c.className = 'dung-cell dung-chests ' + (s.chests > 0 ? 'has' : 'empty');
-      c.innerHTML = `<span>${s.chests}</span><span class="cell-label">chests</span>`;
-      c.addEventListener('click', () => {
-        // cycle: total -> total-1 -> ... -> 0 -> total
+    host.appendChild(buildBossCell({
+      id,
+      spriteSrc:    DUNGEON_SPRITES[id],
+      fallback:     DUNGEON_FALLBACKS[id] || [d.name],
+      label:        DUNGEON_LABELS[id] || d.name,
+      defeated:     !!s.boss,
+      chestsLeft:   s.chests,
+      chestsTotal:  d.totalChests,
+      showChests:   d.totalChests > 0,
+      prize:        s.prize,
+      showPrize:    d.totalChests > 0 || id === 'at' || id === 'gt',  // AT/GT prize still matters
+      medallion:    s.medallion,
+      showMed:      !!d.hasMedallion,
+      onBossToggle: () => {
+        s.boss = !s.boss;
+        // Keep items.aga mirrored with Castle Tower's boss state so that
+        // logic.js's canReachDWViaAgahnim() works without needing state refs.
+        if (id === 'at') state.items.aga = s.boss;
+        saveState();
+        rerenderAll();
+      },
+      onChestsTap: () => {
         s.chests = (s.chests <= 0) ? d.totalChests : s.chests - 1;
         saveState();
         rerenderAll();
-      });
-      row.appendChild(c);
-    } else {
-      // empty spacer so grid alignment is preserved
-      const c = document.createElement('div');
-      c.className = 'dung-cell dung-chests empty';
-      c.innerHTML = `<span>–</span><span class="cell-label">chests</span>`;
-      row.appendChild(c);
-    }
-
-    // Boss cell
-    const b = document.createElement('div');
-    b.className = 'dung-cell dung-boss' + (s.boss ? ' defeated' : '');
-    b.innerHTML = `<span class="boss-mark"></span><span class="cell-label">boss</span>`;
-    b.addEventListener('click', () => {
-      s.boss = !s.boss;
-      saveState();
-      rerenderAll();
-    });
-    row.appendChild(b);
-
-    // Prize cell
-    const p = document.createElement('div');
-    p.className = 'dung-cell dung-prize';
-    p.dataset.prize = s.prize;
-    p.innerHTML = `<span class="prize-mark">${prizeGlyph(s.prize)}</span><span class="cell-label">prize</span>`;
-    p.addEventListener('click', () => openPrizeModal(id, d));
-    row.appendChild(p);
-
-    // Medallion cell (only MM/TR)
-    if (d.hasMedallion) {
-      const m = document.createElement('div');
-      m.className = 'dung-cell dung-med';
-      m.dataset.med = s.medallion;
-      m.innerHTML = `<span class="med-mark">${medGlyph(s.medallion)}</span><span class="cell-label">med</span>`;
-      m.addEventListener('click', () => openMedallionModal(id, d));
-      row.appendChild(m);
-    }
-
-    host.appendChild(row);
+      },
+      onPrizeTap: () => {
+        s.prize = nextPrize(s.prize || 0);
+        saveState();
+        rerenderAll();
+      },
+      onMedTap: () => {
+        s.medallion = nextMed(s.medallion);
+        saveState();
+        rerenderAll();
+      },
+    }));
   });
 }
 
-function prizeGlyph(p) {
-  return ['?', '◆', '◆', '◇', '◇'][p] || '?';
-}
-function medGlyph(m) {
-  return ['?', 'B', 'E', 'Q'][m] || '?';
+function renderSMBossGrid() {
+  const host = document.getElementById('sm-boss-grid');
+  if (!host) return;
+  host.innerHTML = '';
+
+  // Re-use SM_BOSSES catalog; store prize state in a dedicated object so
+  // SM boss prizes are tracked alongside ALttP dungeon prizes.
+  SM_BOSSES.forEach(b => {
+    const defeated = !!state.items[b.id];
+    const prizeState = state.smBossPrizes || (state.smBossPrizes = {});
+    const prize = prizeState[b.id] || 0;
+
+    host.appendChild(buildBossCell({
+      id:            b.id,
+      spriteSrc:     b.img,
+      fallback:      [b.label],
+      label:         b.label,
+      defeated,
+      showChests:    false,   // SM bosses don't drop chests
+      prize,
+      showPrize:     true,
+      showMed:       false,
+      onBossToggle:  () => {
+        state.items[b.id] = !defeated;
+        saveState();
+        rerenderAll();
+      },
+      onPrizeTap:    () => {
+        prizeState[b.id] = nextPrize(prize);
+        saveState();
+        rerenderAll();
+      },
+    }));
+  });
 }
 
-/* ---------- Modals ---------- */
+// Build one boss-sprite cell with overlays. Returns a wrapper element
+// (the cell + a small label underneath).
+function buildBossCell(opts) {
+  const wrap = document.createElement('div');
+  wrap.className = 'boss-cell-wrap';
 
-let activePrizeDungeon = null;
-function openPrizeModal(dungId, dungDef) {
-  activePrizeDungeon = dungId;
-  const modal = document.getElementById('prize-modal');
-  document.getElementById('prize-modal-title').textContent = `${dungDef.name} — prize`;
-  modal.classList.remove('hidden');
-}
-function closePrizeModal() {
-  document.getElementById('prize-modal').classList.add('hidden');
-  activePrizeDungeon = null;
+  const cell = document.createElement('div');
+  cell.className = 'boss-cell' + (opts.defeated ? ' defeated' : '');
+  cell.dataset.id = opts.id;
+
+  // Tapping the cell background (not an overlay) toggles boss
+  cell.addEventListener('click', (ev) => {
+    if (ev.target.closest('.boss-overlay')) return;
+    opts.onBossToggle && opts.onBossToggle();
+  });
+
+  // Sprite (or fallback)
+  if (opts.spriteSrc) {
+    const img = document.createElement('img');
+    img.className = 'boss-sprite';
+    img.src = opts.spriteSrc;
+    img.alt = opts.label;
+    img.draggable = false;
+    img.addEventListener('error', () => {
+      img.remove();
+      appendFallback(cell, opts.fallback);
+    });
+    cell.appendChild(img);
+  } else {
+    appendFallback(cell, opts.fallback);
+  }
+
+  // Chest counter overlay
+  if (opts.showChests) {
+    const c = document.createElement('div');
+    c.className = 'boss-overlay boss-chests' + (opts.chestsLeft <= 0 ? ' empty' : '');
+    c.textContent = opts.chestsLeft;
+    c.addEventListener('click', (e) => { e.stopPropagation(); opts.onChestsTap && opts.onChestsTap(); });
+    cell.appendChild(c);
+  }
+
+  // Prize overlay
+  if (opts.showPrize) {
+    const p = document.createElement('div');
+    p.className = 'boss-overlay boss-prize';
+    p.dataset.prize = opts.prize || 0;
+    p.textContent = prizeGlyph(opts.prize || 0);
+    p.addEventListener('click', (e) => { e.stopPropagation(); opts.onPrizeTap && opts.onPrizeTap(); });
+    cell.appendChild(p);
+  }
+
+  // Medallion overlay (MM/TR only)
+  if (opts.showMed) {
+    const m = document.createElement('div');
+    m.className = 'boss-overlay boss-med';
+    m.dataset.med = opts.medallion || 0;
+    m.textContent = medGlyph(opts.medallion || 0);
+    m.addEventListener('click', (e) => { e.stopPropagation(); opts.onMedTap && opts.onMedTap(); });
+    cell.appendChild(m);
+  }
+
+  wrap.appendChild(cell);
+  return wrap;
 }
 
-let activeMedDungeon = null;
-function openMedallionModal(dungId, dungDef) {
-  activeMedDungeon = dungId;
-  const modal = document.getElementById('medallion-modal');
-  document.getElementById('medallion-modal-title').textContent = `${dungDef.name} — medallion`;
-  modal.classList.remove('hidden');
-}
-function closeMedallionModal() {
-  document.getElementById('medallion-modal').classList.add('hidden');
-  activeMedDungeon = null;
+function appendFallback(cell, lines) {
+  const fb = document.createElement('div');
+  fb.className = 'boss-fallback';
+  lines.forEach((line, i) => {
+    const s = document.createElement('span');
+    s.className = i === 0 ? 'boss-fallback-name' : '';
+    s.textContent = line;
+    fb.appendChild(s);
+  });
+  cell.appendChild(fb);
 }
 
 /* ---------- Rendering: locations ---------- */
@@ -449,8 +564,8 @@ function rerenderAll() {
   renderItemGrid('z3-items',    Z3_ITEMS);
   renderItemGrid('sm-bosses',   SM_BOSSES, true);
   renderItemGrid('sm-items',    SM_ITEMS);
-  renderItemGrid('agahnim-row', AGAHNIM, true);
   renderDungeons();
+  renderSMBossGrid();
   renderLocations();
 }
 
@@ -509,41 +624,8 @@ function setupSettings() {
   });
 }
 
-function setupPrizeModal() {
-  document.querySelectorAll('#prize-modal .prize-opt').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const p = parseInt(btn.dataset.prize, 10);
-      if (activePrizeDungeon) {
-        state.dungeons[activePrizeDungeon].prize = p;
-        saveState();
-      }
-      closePrizeModal();
-      rerenderAll();
-    });
-  });
-  document.getElementById('prize-close').addEventListener('click', closePrizeModal);
-  document.getElementById('prize-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'prize-modal') closePrizeModal();
-  });
-}
-
-function setupMedallionModal() {
-  document.querySelectorAll('#medallion-modal .prize-opt').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const m = parseInt(btn.dataset.med, 10);
-      if (activeMedDungeon) {
-        state.dungeons[activeMedDungeon].medallion = m;
-        saveState();
-      }
-      closeMedallionModal();
-      rerenderAll();
-    });
-  });
-  document.getElementById('medallion-close').addEventListener('click', closeMedallionModal);
-  document.getElementById('medallion-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'medallion-modal') closeMedallionModal();
-  });
-}
+function setupPrizeModal() { /* no-op; prize cycling is now inline tap */ }
+function setupMedallionModal() { /* no-op; medallion cycling is now inline tap */ }
 
 /* ---------- Init ---------- */
 
@@ -551,8 +633,6 @@ function init() {
   setupTabs();
   setupReset();
   setupSettings();
-  setupPrizeModal();
-  setupMedallionModal();
   rerenderAll();
 }
 
