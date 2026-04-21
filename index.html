@@ -64,18 +64,19 @@
 <section class="panel hidden" id="panel-dungeons" data-panel="dungeons">
 
   <div class="section">
+    <h2 class="section-title">A Link to the Past</h2>
     <div class="dungeon-legend">
-      <div class="legend-item"><span class="dot dot-chests"></span>Chests remaining</div>
-      <div class="legend-item"><span class="dot dot-boss"></span>Boss defeated</div>
-      <div class="legend-item"><span class="dot dot-prize"></span>Crystal/pendant</div>
-      <div class="legend-item"><span class="dot dot-med"></span>Medallion (MM/TR)</div>
+      <div class="legend-item"><span class="dot dot-chests"></span>Chests left</div>
+      <div class="legend-item"><span class="dot dot-boss"></span>Tap sprite: boss</div>
+      <div class="legend-item"><span class="dot dot-prize"></span>Tap ◇: prize</div>
+      <div class="legend-item"><span class="dot dot-med"></span>Tap △: medallion</div>
     </div>
-    <div class="dungeon-list" id="z3-dungeons"></div>
+    <div class="boss-grid" id="z3-dungeons"></div>
   </div>
 
   <div class="section">
-    <h2 class="section-title">Agahnim</h2>
-    <div class="item-grid compact" id="agahnim-row"></div>
+    <h2 class="section-title">Super Metroid Bosses</h2>
+    <div class="boss-grid" id="sm-boss-grid"></div>
   </div>
 
 </section>
@@ -149,39 +150,6 @@
     </div>
     <div class="modal-actions">
       <button class="btn-ghost" id="settings-close">Done</button>
-    </div>
-  </div>
-</div>
-
-<!-- Prize picker modal -->
-<div class="modal-backdrop hidden" id="prize-modal" role="dialog" aria-modal="true">
-  <div class="modal compact-modal">
-    <h3 id="prize-modal-title">Set prize</h3>
-    <div class="prize-picker">
-      <button class="prize-opt" data-prize="0"><span class="prize-swatch prize-none">?</span>Unknown</button>
-      <button class="prize-opt" data-prize="1"><span class="prize-swatch prize-green">◆</span>Green pendant</button>
-      <button class="prize-opt" data-prize="2"><span class="prize-swatch prize-red-blue">◆</span>Red/Blue pendant</button>
-      <button class="prize-opt" data-prize="3"><span class="prize-swatch prize-crystal">◇</span>Crystal</button>
-      <button class="prize-opt" data-prize="4"><span class="prize-swatch prize-red-crystal">◇</span>Crystal 5/6</button>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-ghost" id="prize-close">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- Medallion picker modal -->
-<div class="modal-backdrop hidden" id="medallion-modal" role="dialog" aria-modal="true">
-  <div class="modal compact-modal">
-    <h3 id="medallion-modal-title">Set medallion</h3>
-    <div class="prize-picker">
-      <button class="prize-opt" data-med="0"><span class="prize-swatch prize-none">?</span>Unknown</button>
-      <button class="prize-opt" data-med="1"><span class="prize-swatch med-bombos">B</span>Bombos</button>
-      <button class="prize-opt" data-med="2"><span class="prize-swatch med-ether">E</span>Ether</button>
-      <button class="prize-opt" data-med="3"><span class="prize-swatch med-quake">Q</span>Quake</button>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-ghost" id="medallion-close">Cancel</button>
     </div>
   </div>
 </div>
