@@ -21,21 +21,21 @@ const IMG_SM = 'images/metroid3/';
 
 // ALttP items. kind: 'bool' | 'level' (cycles 0..max)
 // Order matches the in-game Y-menu / equipment screen (5 per row):
-//   Row 1: Bow       | Boomerang | Hookshot | Bombs     | Powder
+//   Row 1: Bow       | Boomerang | Hookshot | Powder    | Mushroom
 //   Row 2: Fire Rod  | Ice Rod   | Bombos   | Ether     | Quake
 //   Row 3: Lantern   | Hammer    | Shovel   | Flute     | Book
 //   Row 4: Bottle    | Somaria   | Byrna    | Cape      | Mirror
 //   Row 5: Sword     | M.Pearl   | Boots    | Flippers  | Glove
-// Mushroom is shown in the Agahnim/extras row below.
+// Bombs are assumed to always be present, so they aren't tracked.
 const Z3_ITEMS = [
-  // Row 1 — consumables/throwables (Y-menu row 1)
+  // Row 1 — consumables/throwables
   { id: 'bow',       kind: 'level', max: 2, label: 'Bow',       glyph: '⤭', tip: 'Bow → Silvers',
     img: [IMG_Z3+'bow.png', IMG_Z3+'silvers.png'] },
   { id: 'boomerang', kind: 'level', max: 3, label: 'Boomer.',   glyph: '↺', tip: 'Blue → Red → Both',
     img: [IMG_Z3+'boomerang.png', IMG_Z3+'boomerang2.png', IMG_Z3+'boomerang3.png'] },
   { id: 'hookshot',  kind: 'bool',           label: 'Hookshot', glyph: '⚓', img: IMG_Z3+'hookshot.png' },
-  { id: 'bombs',     kind: 'bool',           label: 'Bombs',    glyph: '●', img: IMG_Z3+'bombs.png' },
   { id: 'powder',    kind: 'bool',           label: 'Powder',   glyph: '❋', img: IMG_Z3+'powder.png' },
+  { id: 'mushroom',  kind: 'bool',           label: 'Mushroom', glyph: '✿', img: IMG_Z3+'mushroom.png' },
   // Row 2 — rods & medallions
   { id: 'firerod',   kind: 'bool',           label: 'Fire Rod', glyph: '🜂', img: IMG_Z3+'firerod.png' },
   { id: 'icerod',    kind: 'bool',           label: 'Ice Rod',  glyph: '❄', img: IMG_Z3+'icerod.png' },
@@ -111,8 +111,7 @@ const SM_BOSSES = [
 ];
 
 const AGAHNIM = [
-  { id: 'aga',      kind: 'bool', label: 'Agahnim',  glyph: 'A', img: IMG_Z3+'boss102.png' },
-  { id: 'mushroom', kind: 'bool', label: 'Mushroom', glyph: '✿', img: IMG_Z3+'mushroom.png' },
+  { id: 'aga', kind: 'bool', label: 'Agahnim', glyph: 'A', img: IMG_Z3+'boss102.png' },
 ];
 
 /* ---------- Default state ---------- */
