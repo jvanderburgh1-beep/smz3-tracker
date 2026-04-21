@@ -4,7 +4,7 @@
    fallback so the app works fully offline.
    ============================================================= */
 
-const CACHE_VERSION = 'smz3-tracker-v4';
+const CACHE_VERSION = 'smz3-tracker-v5';
 const CORE_ASSETS = [
   './',
   './index.html',
