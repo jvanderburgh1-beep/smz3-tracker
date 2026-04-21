@@ -161,23 +161,23 @@ main {
 
 /* =============================================================
    Item grid — fixed 5-column layout to match in-game menu structure.
-   Tap targets shrink rather than the grid reflowing, so row/column
-   semantics are preserved across screen sizes.
+   Cells are box-free: just the sprite, grayscaled when off and full
+   color when on. No labels, tight spacing.
    ============================================================= */
 .item-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
+  gap: 2px;
 }
 .item-grid.compact {
   /* Boss row — still 5 wide so it vertically aligns with the items grid */
   grid-template-columns: repeat(5, 1fr);
 }
 
-/* Spacer: takes up a grid slot but renders nothing visible. */
+/* Spacer: takes up a grid slot but renders nothing. */
 .item.spacer {
   background: transparent;
-  border: 1px dashed transparent;
+  border: none;
   cursor: default;
   pointer-events: none;
 }
@@ -185,42 +185,54 @@ main {
 .item {
   position: relative;
   aspect-ratio: 1 / 1;
-  min-height: var(--tap-min);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-elev);
+  min-height: 44px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 2px;
+  flex-direction: column;
   cursor: pointer;
   color: var(--text-faint);
-  transition: border-color .12s, background .12s, color .12s, transform .08s;
-  font-size: 10px; text-align: center;
-  padding: 4px; line-height: 1.1;
-  font-weight: 600; letter-spacing: .3px;
+  transition: transform .08s;
+  padding: 2px;
 }
-.item:active { transform: scale(0.95); }
+.item:active { transform: scale(0.90); }
+
+/* Glyph fallback (when no image) — still unboxed, just shows the symbol */
 .item .glyph {
-  font-size: 18px; line-height: 1;
+  font-size: 22px; line-height: 1;
   font-family: var(--font-display);
-  opacity: .45;
-  transition: opacity .12s, color .12s;
+  opacity: .35;
+  filter: grayscale(1);
+  transition: opacity .12s, filter .12s, color .12s;
 }
+.item.on .glyph {
+  opacity: 1;
+  filter: none;
+  color: var(--accent);
+}
+.item.boss-item.on .glyph { color: var(--boss); }
+
+/* Label shown only as a last-resort accessibility fallback */
 .item .label {
-  font-size: 9px; opacity: .75;
+  font-size: 8px;
+  opacity: .55;
   text-transform: uppercase;
+  margin-top: 2px;
+  letter-spacing: .3px;
 }
 
 /* Image variant: game sprites rendered pixel-perfect.
    Off state: grayscaled + dimmed. On state: full color. */
 .item .item-img {
-  width: 72%;
-  height: 72%;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
-  filter: grayscale(1) brightness(0.5);
-  opacity: 0.55;
+  filter: grayscale(1) brightness(0.45);
+  opacity: 0.5;
   transition: filter .15s, opacity .15s;
   pointer-events: none;
   user-select: none;
@@ -230,18 +242,10 @@ main {
   opacity: 1;
 }
 
-/* ON state */
-.item.on {
-  border-color: var(--accent);
-  background: linear-gradient(180deg, rgba(245,166,35,0.14), rgba(245,166,35,0.04));
-  color: var(--accent);
-}
-.item.on .glyph { opacity: 1; }
-
 /* Level badge (sword L1-L4, glove L1-L2, bow silvers, bottle count) */
 .item .level {
   position: absolute;
-  top: 3px; right: 4px;
+  top: -2px; right: -2px;
   font-size: 10px;
   font-weight: 800;
   color: var(--bg);
@@ -249,15 +253,10 @@ main {
   padding: 1px 5px;
   border-radius: 10px;
   display: none;
+  z-index: 1;
+  box-shadow: 0 0 0 1px var(--bg);
 }
 .item.on .level { display: inline-block; }
-
-/* Boss variant (red) */
-.item.boss-item.on {
-  color: var(--boss);
-  border-color: var(--boss);
-  background: linear-gradient(180deg, rgba(214,69,69,0.14), rgba(214,69,69,0.04));
-}
 
 /* =============================================================
    Dungeons
@@ -608,17 +607,17 @@ main {
    the in-game menu layout is preserved. Cells just shrink to fit.
    ============================================================= */
 @media (max-width: 360px) {
-  .item-grid { gap: 4px; }
-  .item { padding: 3px; }
-  .item .label { font-size: 8px; }
+  .item-grid { gap: 1px; }
+  .item { padding: 1px; }
+  .item .label { font-size: 7px; }
   .dungeon-name { font-size: 12px; padding: 8px; }
   .dung-cell { min-width: 46px; }
   .brand-sub { display: none; }
 }
 
-/* Tablet and up — widen dungeon/location lists but leave items alone */
+/* Tablet and up — widen dungeon/location lists but cap item grid width */
 @media (min-width: 700px) {
   .dungeon-list { grid-template-columns: 1fr 1fr; }
   .loc-list { grid-template-columns: 1fr 1fr; }
-  .item-grid { max-width: 500px; margin-left: auto; margin-right: auto; }
+  .item-grid { max-width: 420px; margin-left: auto; margin-right: auto; }
 }
