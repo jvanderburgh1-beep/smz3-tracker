@@ -11,71 +11,82 @@ const ALL_LOCATIONS = LOGIC.LOCATIONS;
 
 const STORAGE_KEY = 'smz3-tracker-state-v1';
 
-/* ---------- Item catalogs ---------- */
+/* ---------- Item catalogs ----------
+   `img` — primary image source. For level items, use an array indexed by level (1-based).
+   `glyph` / `label` — fallback shown if the image fails to load (file not present yet).
+*/
+
+const IMG_Z3 = 'images/zelda3/';
+const IMG_SM = 'images/metroid3/';
 
 // ALttP items. kind: 'bool' | 'level' (cycles 0..max)
 const Z3_ITEMS = [
-  { id: 'bow',       kind: 'level', max: 2, label: 'Bow',       glyph: '⤭', tip: 'Bow → Silvers' },
-  { id: 'boomerang', kind: 'level', max: 3, label: 'Boomer.',   glyph: '↺', tip: 'Blue → Red → Both' },
-  { id: 'hookshot',  kind: 'bool',           label: 'Hookshot', glyph: '⚓' },
-  { id: 'mushroom',  kind: 'bool',           label: 'Mushroom', glyph: '✿' },
-  { id: 'powder',    kind: 'bool',           label: 'Powder',   glyph: '❋' },
-  { id: 'firerod',   kind: 'bool',           label: 'Fire Rod', glyph: '🜂' },
-  { id: 'icerod',    kind: 'bool',           label: 'Ice Rod',  glyph: '❄' },
-  { id: 'bombos',    kind: 'bool',           label: 'Bombos',   glyph: 'B' },
-  { id: 'ether',     kind: 'bool',           label: 'Ether',    glyph: 'E' },
-  { id: 'quake',     kind: 'bool',           label: 'Quake',    glyph: 'Q' },
-  { id: 'lantern',   kind: 'bool',           label: 'Lantern',  glyph: '☼' },
-  { id: 'hammer',    kind: 'bool',           label: 'Hammer',   glyph: '⚒' },
-  { id: 'shovel',    kind: 'bool',           label: 'Shovel',   glyph: '⛏' },
-  { id: 'flute',     kind: 'bool',           label: 'Flute',    glyph: '♫' },
-  { id: 'book',      kind: 'bool',           label: 'Book',     glyph: '❢' },
-  { id: 'bottle',    kind: 'level', max: 4, label: 'Bottle',   glyph: '◉', tip: 'Up to 4 bottles' },
-  { id: 'somaria',   kind: 'bool',           label: 'Somaria',  glyph: '⌬' },
-  { id: 'byrna',     kind: 'bool',           label: 'Byrna',    glyph: '✦' },
-  { id: 'cape',      kind: 'bool',           label: 'Cape',     glyph: '▽' },
-  { id: 'mirror',    kind: 'bool',           label: 'Mirror',   glyph: '◈' },
-  { id: 'sword',     kind: 'level', max: 4, label: 'Sword',    glyph: '†', tip: 'Fighter → Master → Tempered → Gold' },
-  { id: 'moonpearl', kind: 'bool',           label: 'M.Pearl',  glyph: '◐' },
-  { id: 'flippers',  kind: 'bool',           label: 'Flippers', glyph: '~' },
-  { id: 'boots',     kind: 'bool',           label: 'Boots',    glyph: '»' },
-  { id: 'glove',     kind: 'level', max: 2, label: 'Glove',    glyph: '✊', tip: 'Power → Titan' },
-  { id: 'bombs',     kind: 'bool',           label: 'Bombs',    glyph: '●' },
+  { id: 'bow',       kind: 'level', max: 2, label: 'Bow',       glyph: '⤭', tip: 'Bow → Silvers',
+    img: [IMG_Z3+'bow.png', IMG_Z3+'silvers.png'] },
+  { id: 'boomerang', kind: 'level', max: 3, label: 'Boomer.',   glyph: '↺', tip: 'Blue → Red → Both',
+    img: [IMG_Z3+'boomerang.png', IMG_Z3+'boomerang2.png', IMG_Z3+'boomerang3.png'] },
+  { id: 'hookshot',  kind: 'bool',           label: 'Hookshot', glyph: '⚓', img: IMG_Z3+'hookshot.png' },
+  { id: 'mushroom',  kind: 'bool',           label: 'Mushroom', glyph: '✿', img: IMG_Z3+'mushroom.png' },
+  { id: 'powder',    kind: 'bool',           label: 'Powder',   glyph: '❋', img: IMG_Z3+'powder.png' },
+  { id: 'firerod',   kind: 'bool',           label: 'Fire Rod', glyph: '🜂', img: IMG_Z3+'firerod.png' },
+  { id: 'icerod',    kind: 'bool',           label: 'Ice Rod',  glyph: '❄', img: IMG_Z3+'icerod.png' },
+  { id: 'bombos',    kind: 'bool',           label: 'Bombos',   glyph: 'B', img: IMG_Z3+'bombos.png' },
+  { id: 'ether',     kind: 'bool',           label: 'Ether',    glyph: 'E', img: IMG_Z3+'ether.png' },
+  { id: 'quake',     kind: 'bool',           label: 'Quake',    glyph: 'Q', img: IMG_Z3+'quake.png' },
+  { id: 'lantern',   kind: 'bool',           label: 'Lantern',  glyph: '☼', img: IMG_Z3+'lamp.png' },
+  { id: 'hammer',    kind: 'bool',           label: 'Hammer',   glyph: '⚒', img: IMG_Z3+'hammer.png' },
+  { id: 'shovel',    kind: 'bool',           label: 'Shovel',   glyph: '⛏', img: IMG_Z3+'shovel.png' },
+  { id: 'flute',     kind: 'bool',           label: 'Flute',    glyph: '♫', img: IMG_Z3+'flute.png' },
+  { id: 'book',      kind: 'bool',           label: 'Book',     glyph: '❢', img: IMG_Z3+'book.png' },
+  { id: 'bottle',    kind: 'level', max: 4, label: 'Bottle',    glyph: '◉', tip: 'Up to 4 bottles',
+    img: IMG_Z3+'bottle.png' },
+  { id: 'somaria',   kind: 'bool',           label: 'Somaria',  glyph: '⌬', img: IMG_Z3+'somaria.png' },
+  { id: 'byrna',     kind: 'bool',           label: 'Byrna',    glyph: '✦', img: IMG_Z3+'byrna.png' },
+  { id: 'cape',      kind: 'bool',           label: 'Cape',     glyph: '▽', img: IMG_Z3+'cape.png' },
+  { id: 'mirror',    kind: 'bool',           label: 'Mirror',   glyph: '◈', img: IMG_Z3+'mirror.png' },
+  { id: 'sword',     kind: 'level', max: 4, label: 'Sword',     glyph: '†', tip: 'Fighter → Master → Tempered → Gold',
+    img: [IMG_Z3+'sword1.png', IMG_Z3+'sword2.png', IMG_Z3+'sword3.png', IMG_Z3+'sword4.png'] },
+  { id: 'moonpearl', kind: 'bool',           label: 'M.Pearl',  glyph: '◐', img: IMG_Z3+'moonpearl.png' },
+  { id: 'flippers',  kind: 'bool',           label: 'Flippers', glyph: '~', img: IMG_Z3+'flippers.png' },
+  { id: 'boots',     kind: 'bool',           label: 'Boots',    glyph: '»', img: IMG_Z3+'boots.png' },
+  { id: 'glove',     kind: 'level', max: 2, label: 'Glove',     glyph: '✊', tip: 'Power → Titan',
+    img: [IMG_Z3+'glove1.png', IMG_Z3+'glove2.png'] },
+  { id: 'bombs',     kind: 'bool',           label: 'Bombs',    glyph: '●', img: IMG_Z3+'bombs.png' },
 ];
 
 // Super Metroid items
 const SM_ITEMS = [
-  { id: 'missile',  kind: 'bool', label: 'Missile', glyph: 'M' },
-  { id: 'super',    kind: 'bool', label: 'Super',   glyph: 'S' },
-  { id: 'pb',       kind: 'bool', label: 'PBomb',   glyph: 'PB' },
-  { id: 'grapple',  kind: 'bool', label: 'Grapple', glyph: '⟿' },
-  { id: 'xray',     kind: 'bool', label: 'X-Ray',   glyph: '✕' },
-  { id: 'charge',   kind: 'bool', label: 'Charge',  glyph: '◎' },
-  { id: 'wave',     kind: 'bool', label: 'Wave',    glyph: '∿' },
-  { id: 'ice',      kind: 'bool', label: 'Ice',     glyph: '❋' },
-  { id: 'spazer',   kind: 'bool', label: 'Spazer',  glyph: '=' },
-  { id: 'plasma',   kind: 'bool', label: 'Plasma',  glyph: '⚡' },
-  { id: 'varia',    kind: 'bool', label: 'Varia',   glyph: 'V' },
-  { id: 'gravity',  kind: 'bool', label: 'Gravity', glyph: 'G' },
-  { id: 'morph',    kind: 'bool', label: 'Morph',   glyph: '◉' },
-  { id: 'bombs_sm', kind: 'bool', label: 'Bombs',   glyph: '◎' },
-  { id: 'hijump',   kind: 'bool', label: 'HiJump',  glyph: '↟' },
-  { id: 'speed',    kind: 'bool', label: 'Speed',   glyph: '»' },
-  { id: 'space',    kind: 'bool', label: 'Space J', glyph: '↑' },
-  { id: 'spring',   kind: 'bool', label: 'Spring',  glyph: '◴' },
-  { id: 'screw',    kind: 'bool', label: 'Screw',   glyph: '✱' },
+  { id: 'missile',  kind: 'bool', label: 'Missile', glyph: 'M',  img: IMG_SM+'missile.png' },
+  { id: 'super',    kind: 'bool', label: 'Super',   glyph: 'S',  img: IMG_SM+'supermissile.png' },
+  { id: 'pb',       kind: 'bool', label: 'PBomb',   glyph: 'PB', img: IMG_SM+'powerbomb.png' },
+  { id: 'grapple',  kind: 'bool', label: 'Grapple', glyph: '⟿', img: IMG_SM+'grapple.png' },
+  { id: 'xray',     kind: 'bool', label: 'X-Ray',   glyph: '✕',  img: IMG_SM+'xray.png' },
+  { id: 'charge',   kind: 'bool', label: 'Charge',  glyph: '◎', img: IMG_SM+'charge.png' },
+  { id: 'wave',     kind: 'bool', label: 'Wave',    glyph: '∿', img: IMG_SM+'wave.png' },
+  { id: 'ice',      kind: 'bool', label: 'Ice',     glyph: '❋', img: IMG_SM+'ice.png' },
+  { id: 'spazer',   kind: 'bool', label: 'Spazer',  glyph: '=',  img: IMG_SM+'spazer.png' },
+  { id: 'plasma',   kind: 'bool', label: 'Plasma',  glyph: '⚡', img: IMG_SM+'plasma.png' },
+  { id: 'varia',    kind: 'bool', label: 'Varia',   glyph: 'V',  img: IMG_SM+'varia.png' },
+  { id: 'gravity',  kind: 'bool', label: 'Gravity', glyph: 'G',  img: IMG_SM+'gravity.png' },
+  { id: 'morph',    kind: 'bool', label: 'Morph',   glyph: '◉', img: IMG_SM+'morph.png' },
+  { id: 'bombs_sm', kind: 'bool', label: 'Bombs',   glyph: '◎', img: IMG_SM+'bombs.png' },
+  { id: 'hijump',   kind: 'bool', label: 'HiJump',  glyph: '↟', img: IMG_SM+'hijump.png' },
+  { id: 'speed',    kind: 'bool', label: 'Speed',   glyph: '»',  img: IMG_SM+'speed.png' },
+  { id: 'space',    kind: 'bool', label: 'Space J', glyph: '↑', img: IMG_SM+'space.png' },
+  { id: 'spring',   kind: 'bool', label: 'Spring',  glyph: '◴', img: IMG_SM+'springball.png' },
+  { id: 'screw',    kind: 'bool', label: 'Screw',   glyph: '✱', img: IMG_SM+'screw.png' },
 ];
 
 const SM_BOSSES = [
-  { id: 'kraid',       kind: 'bool', label: 'Kraid',    glyph: 'K' },
-  { id: 'phantoon',    kind: 'bool', label: 'Phantoon', glyph: 'P' },
-  { id: 'draygon',     kind: 'bool', label: 'Draygon',  glyph: 'D' },
-  { id: 'ridley',      kind: 'bool', label: 'Ridley',   glyph: 'R' },
-  { id: 'motherbrain', kind: 'bool', label: 'Mother B', glyph: 'MB' },
+  { id: 'kraid',       kind: 'bool', label: 'Kraid',    glyph: 'K',  img: IMG_SM+'kraid.png' },
+  { id: 'phantoon',    kind: 'bool', label: 'Phantoon', glyph: 'P',  img: IMG_SM+'phantoon.png' },
+  { id: 'draygon',     kind: 'bool', label: 'Draygon',  glyph: 'D',  img: IMG_SM+'draygon.png' },
+  { id: 'ridley',      kind: 'bool', label: 'Ridley',   glyph: 'R',  img: IMG_SM+'ridley.png' },
+  { id: 'motherbrain', kind: 'bool', label: 'Mother B', glyph: 'MB', img: IMG_SM+'mbrain.png' },
 ];
 
 const AGAHNIM = [
-  { id: 'aga', kind: 'bool', label: 'Agahnim', glyph: 'A' },
+  { id: 'aga', kind: 'bool', label: 'Agahnim', glyph: 'A', img: IMG_Z3+'boss102.png' },
 ];
 
 /* ---------- Default state ---------- */
@@ -165,6 +176,18 @@ function flashSaved() {
 
 /* ---------- Rendering: items ---------- */
 
+// Resolve the right image src for an item given its current value.
+// For level items, `img` is an array indexed by level-1; for single-sprite
+// level items (like bottle), `img` is a string and is shared across all levels.
+function itemImgSrc(it, v) {
+  if (!it.img) return null;
+  if (Array.isArray(it.img)) {
+    const i = Math.max(0, Math.min(it.img.length - 1, (v || 1) - 1));
+    return it.img[i];
+  }
+  return it.img;
+}
+
 function renderItemGrid(hostId, catalog, isBoss = false) {
   const host = document.getElementById(hostId);
   host.innerHTML = '';
@@ -184,15 +207,39 @@ function renderItemGrid(hostId, catalog, isBoss = false) {
       el.appendChild(level);
     }
 
-    const glyph = document.createElement('span');
-    glyph.className = 'glyph';
-    glyph.textContent = it.glyph;
-    el.appendChild(glyph);
-
-    const lab = document.createElement('span');
-    lab.className = 'label';
-    lab.textContent = it.label;
-    el.appendChild(lab);
+    // Image takes priority. If it fails, fall back to glyph+label so the
+    // app stays usable when images aren't yet in the repo.
+    const src = itemImgSrc(it, v);
+    if (src) {
+      const img = document.createElement('img');
+      img.className = 'item-img';
+      img.src = src;
+      img.alt = it.label;
+      img.draggable = false;
+      img.loading = 'lazy';
+      img.addEventListener('error', () => {
+        // Swap in the text fallback in-place
+        img.remove();
+        const glyph = document.createElement('span');
+        glyph.className = 'glyph';
+        glyph.textContent = it.glyph || '?';
+        el.appendChild(glyph);
+        const lab = document.createElement('span');
+        lab.className = 'label';
+        lab.textContent = it.label;
+        el.appendChild(lab);
+      });
+      el.appendChild(img);
+    } else {
+      const glyph = document.createElement('span');
+      glyph.className = 'glyph';
+      glyph.textContent = it.glyph || '?';
+      el.appendChild(glyph);
+      const lab = document.createElement('span');
+      lab.className = 'label';
+      lab.textContent = it.label;
+      el.appendChild(lab);
+    }
 
     el.addEventListener('click', () => {
       if (it.kind === 'level') {
