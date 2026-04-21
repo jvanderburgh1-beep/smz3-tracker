@@ -453,11 +453,12 @@ const DUNGEONS = {
       // Beating Ganon inside GT: need silvers or similar — abstracted
       const canBoss = silvers(items) && has(items, 'hammer') && anyBow(items);
       const boss = canBoss ? STATE.AVAILABLE : STATE.UNAVAIL;
-      // Simplified: if you can enter, chests are accessible with full kit
+      // Simplified: if you can enter, chests are accessible with full kit.
+      // Bombs are assumed to always be available.
       let reachable = 0;
       if (has(items, 'firerod') && has(items, 'hookshot') &&
           has(items, 'hammer') && has(items, 'somaria') &&
-          has(items, 'boots') && has(items, 'bombs')) reachable = 20;
+          has(items, 'boots')) reachable = 20;
       else if (has(items, 'hammer')) reachable = 10;
       else reachable = 3;
       reachable = Math.min(reachable, 20);
