@@ -284,97 +284,153 @@ main {
 .dot-prize  { background: var(--crystal); }
 .dot-med    { background: var(--med-ether); }
 
-.dungeon-list {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 6px;
-}
+/* ---- Boss-sprite grid (new compact dungeon layout) ----
+   Each cell is a boss sprite. Overlays: chest count (bottom-left),
+   prize badge (bottom-right), medallion badge (top-right, MM/TR only).
+   Tapping the sprite toggles the boss-defeated state. Tapping a corner
+   overlay cycles that overlay and stops the tap from bubbling. */
 
-.dungeon {
+.boss-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-  align-items: stretch;
-  gap: 0;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  min-height: 60px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  max-width: 520px;
+  margin: 0 auto;
 }
-.dungeon.has-medallion {
-  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
-}
+@media (min-width: 420px) { .boss-grid { grid-template-columns: repeat(5, 1fr); } }
+@media (min-width: 600px) { .boss-grid { grid-template-columns: repeat(6, 1fr); } }
 
-.dungeon-name {
-  display: flex; flex-direction: column;
+.boss-cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 8px 10px;
-  font-size: 13px; line-height: 1.2;
+  min-height: 72px;
+  transition: transform .08s;
+}
+.boss-cell:active { transform: scale(0.95); }
+
+.boss-cell .boss-sprite {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  transition: opacity .15s, filter .15s;
+  pointer-events: none;
+  user-select: none;
+}
+/* Alive = fully opaque. Defeated = low opacity & desaturated. */
+.boss-cell.defeated .boss-sprite {
+  opacity: 0.28;
+  filter: grayscale(1);
+}
+
+/* Text fallback used when sprite image is missing — shows short label */
+.boss-cell .boss-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 10px;
+  line-height: 1.1;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 4px;
+  transition: opacity .15s, color .15s;
+}
+.boss-cell .boss-fallback .boss-fallback-name {
+  font-size: 10px;
   font-weight: 700;
   color: var(--text);
 }
-.dungeon-name .sub {
-  font-size: 9px;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-top: 3px;
-  font-weight: 400;
-}
+.boss-cell.defeated .boss-fallback { opacity: 0.5; }
 
-.dung-cell {
-  min-width: 54px;
-  display: flex; align-items: center; justify-content: center;
-  flex-direction: column;
-  font-size: 16px; font-weight: 800;
-  color: var(--text-faint);
+/* ---- Corner overlays ---- */
+
+.boss-overlay {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-weight: 800;
   cursor: pointer;
-  background: var(--bg-elev-2);
-  border-left: 1px solid var(--border);
-  transition: background .12s, color .12s;
-  gap: 2px; padding: 4px; text-align: center;
+  z-index: 2;
+  user-select: none;
+  -webkit-user-select: none;
 }
-.dung-cell:active { background: var(--border); }
-.dung-cell .cell-label {
-  font-size: 8px;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 600;
+.boss-overlay:active { transform: scale(0.85); }
+
+/* Chest counter (bottom-left) */
+.boss-chests {
+  left: -2px;
+  bottom: -2px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 13px;
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px var(--bg);
 }
+.boss-chests.empty { background: var(--text-faint); opacity: 0.5; }
 
-.dung-chests.empty { color: var(--text-faint); opacity: .4; }
-.dung-chests.has   { color: var(--accent); }
-
-.dung-boss .boss-mark { font-size: 18px; }
-.dung-boss.defeated { color: var(--boss); background: rgba(214,69,69,0.08); }
-.dung-boss.defeated .boss-mark::before { content: '✕'; }
-.dung-boss:not(.defeated) .boss-mark::before { content: '◯'; }
-
-.dung-prize .prize-mark {
-  width: 22px; height: 22px;
+/* Prize badge (bottom-right). Default = crystal (neutral). */
+.boss-prize {
+  right: -2px;
+  bottom: -2px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 800;
+  font-size: 12px;
   background: var(--border);
   color: var(--text-faint);
+  box-shadow: 0 0 0 2px var(--bg);
 }
-.dung-prize[data-prize="1"] .prize-mark { background: var(--pendant-green);   color: #0a2e18; }
-.dung-prize[data-prize="2"] .prize-mark { background: var(--pendant-red-blue); color: #0a1a2e; }
-.dung-prize[data-prize="3"] .prize-mark { background: var(--crystal);          color: #1a1a1a; }
-.dung-prize[data-prize="4"] .prize-mark { background: var(--crystal-red);      color: #2a0a0a; }
+.boss-prize[data-prize="0"] { background: var(--crystal);         color: #1a1a1a; }
+.boss-prize[data-prize="1"] { background: var(--pendant-green);    color: #0a2e18; }
+.boss-prize[data-prize="2"] { background: var(--pendant-red-blue); color: #0a1a2e; }
+.boss-prize[data-prize="3"] { background: var(--crystal);          color: #1a1a1a; }
+.boss-prize[data-prize="4"] { background: var(--crystal-red);      color: #2a0a0a; }
 
-.dung-med .med-mark {
-  width: 22px; height: 22px;
+/* Medallion badge (top-right, MM/TR only) */
+.boss-med {
+  right: -2px;
+  top: -2px;
+  width: 22px;
+  height: 22px;
   border-radius: 4px;
-  display: inline-flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 800;
+  font-size: 11px;
   background: var(--border);
   color: var(--text-faint);
+  box-shadow: 0 0 0 2px var(--bg);
 }
-.dung-med[data-med="1"] .med-mark { background: var(--med-bombos); color: #2a0a0a; }
-.dung-med[data-med="2"] .med-mark { background: var(--med-ether);  color: #0a1a2e; }
-.dung-med[data-med="3"] .med-mark { background: var(--med-quake);  color: #1a0a2e; }
+.boss-med[data-med="1"] { background: var(--med-bombos); color: #2a0a0a; }
+.boss-med[data-med="2"] { background: var(--med-ether);  color: #0a1a2e; }
+.boss-med[data-med="3"] { background: var(--med-quake);  color: #1a0a2e; }
+
+/* Dungeon name label under the cell, small, for clarity */
+.boss-cell-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.boss-cell-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  text-align: center;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
 
 /* =============================================================
    Locations
