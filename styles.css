@@ -199,6 +199,26 @@ main {
   text-transform: uppercase;
 }
 
+/* Image variant: game sprites rendered pixel-perfect.
+   Off state: grayscaled + dimmed. On state: full color. */
+.item .item-img {
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  filter: grayscale(1) brightness(0.5);
+  opacity: 0.55;
+  transition: filter .15s, opacity .15s;
+  pointer-events: none;
+  user-select: none;
+}
+.item.on .item-img {
+  filter: none;
+  opacity: 1;
+}
+
 /* ON state */
 .item.on {
   border-color: var(--accent);
