@@ -42,6 +42,21 @@ The logic covers:
 
 Logic is simplified compared to the canonical SMZ3 randomizer rules — it's designed for tracking, not seed generation. Some edge cases (swordless mode, specific keysanity interactions, all OWG tricks) are not modeled.
 
+## Item images
+
+The tracker shows item sprites from crossproduct's original trackers (used with permission). The tracker ships without the image files so you can choose your preferred source; until you add them, items display as text glyphs (still fully functional).
+
+**Fastest way to add them:**
+
+1. Go to `github.com/mistersunshine20/smz3tracker`, click the green `Code` → `Download ZIP`
+2. Unzip it, find the `images/` folder (it has `zelda3/` and `metroid3/` subfolders)
+3. Copy that entire `images/` folder into the root of your repo (next to `index.html`)
+4. Commit and push — the images load automatically on next page load
+
+Alternatively, you can pull the sprites directly from the original repos at `github.com/crossproduct42/alttprandohelper` and `github.com/crossproduct42/smrandohelper`, but you'll need to organize them into `images/zelda3/` and `images/metroid3/` folders yourself.
+
+If any image filename doesn't match what the tracker expects, that single item falls back to a text glyph — nothing else breaks. Expected filenames are listed in the `Z3_ITEMS`, `SM_ITEMS`, `SM_BOSSES`, and `AGAHNIM` catalogs at the top of `tracker.js`.
+
 ## Credits
 
 - **[crossproduct42](https://twitch.tv/crossproduct)** — creator of the original ALttP tracker (`alttprandohelper`). The location availability logic in this app is derived from his public rules. Used with explicit permission.
@@ -59,8 +74,10 @@ smz3-tracker/
 ├── tracker.js              – state, rendering, interaction
 ├── manifest.webmanifest    – PWA manifest
 ├── sw.js                   – service worker (offline)
-├── icons/                  – PWA icons
-├── make_icons.py           – script to regenerate icons
+├── icons/                  – PWA icons (app icon on home screen)
+├── images/                 – item sprites (add these yourself — see "Item images")
+│   ├── zelda3/             – ALttP item sprites
+│   └── metroid3/           – Super Metroid item sprites
 └── README.md               – this file
 ```
 
