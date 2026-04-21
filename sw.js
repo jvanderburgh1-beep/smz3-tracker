@@ -4,7 +4,7 @@
    fallback so the app works fully offline.
    ============================================================= */
 
-const CACHE_VERSION = 'smz3-tracker-v1';
+const CACHE_VERSION = 'smz3-tracker-v2';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -17,6 +17,11 @@ const CORE_ASSETS = [
   './icons/icon-maskable-192.png',
   './icons/icon-maskable-512.png',
 ];
+
+// Image assets are cached on first fetch via the runtime handler below
+// rather than precached, so the SW install step doesn't fail if some
+// filenames are missing or renamed. Once each image loads once online,
+// it's available offline.
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
