@@ -381,39 +381,72 @@ main {
 }
 .boss-chests.empty { background: var(--text-faint); opacity: 0.5; }
 
-/* Prize badge (bottom-right). Default = crystal (neutral). */
+/* Prize badge (bottom-right). Hosts an image from images/prizes/.
+   Background is transparent so the sprite shows its own colors.
+   When the image fails to load, background falls back to a neutral
+   disc and the cell uses the glyph text. */
 .boss-prize {
   right: -2px;
   bottom: -2px;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   font-size: 12px;
-  background: var(--border);
+  background: transparent;
   color: var(--text-faint);
+  overflow: visible;
+  padding: 0;
+}
+/* Only show a neutral disc backdrop when there's no sprite image — i.e.
+   the overlay has text content (glyph fallback) instead of an <img>. */
+.boss-prize:not(:has(.prize-img)) {
+  background: var(--border);
   box-shadow: 0 0 0 2px var(--bg);
 }
-.boss-prize[data-prize="0"] { background: var(--crystal);         color: #1a1a1a; }
-.boss-prize[data-prize="1"] { background: var(--pendant-green);    color: #0a2e18; }
-.boss-prize[data-prize="2"] { background: var(--pendant-red-blue); color: #0a1a2e; }
-.boss-prize[data-prize="3"] { background: var(--crystal);          color: #1a1a1a; }
-.boss-prize[data-prize="4"] { background: var(--crystal-red);      color: #2a0a0a; }
+.prize-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 0 2px var(--bg));
+}
 
-/* Medallion badge (top-right, MM/TR only) */
+/* Medallion badge (top-right, MM/TR only). When a medallion is selected,
+   the actual sprite from images/zelda3/ fills the badge with a
+   transparent background. The unknown state (?) still shows a neutral
+   disc so it reads as an empty slot. */
 .boss-med {
   right: -2px;
   top: -2px;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
   font-size: 11px;
-  background: var(--border);
+  background: transparent;
   color: var(--text-faint);
+  padding: 0;
+}
+/* Unknown-state backdrop: neutral disc + ring so it doesn't blend into
+   the boss sprite. Only applies when no <img> is present. */
+.boss-med:not(:has(.med-img)) {
+  background: var(--border);
   box-shadow: 0 0 0 2px var(--bg);
 }
-.boss-med[data-med="1"] { background: var(--med-bombos); color: #2a0a0a; }
-.boss-med[data-med="2"] { background: var(--med-ether);  color: #0a1a2e; }
-.boss-med[data-med="3"] { background: var(--med-quake);  color: #1a0a2e; }
+.med-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 0 2px var(--bg));
+}
 
 /* Dungeon name label under the cell, small, for clarity */
 .boss-cell-wrap {
@@ -435,21 +468,48 @@ main {
 /* =============================================================
    Locations
    ============================================================= */
+
+/* Sub-tabs for Light World / Dark World inside the Locations panel */
+.subtabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 0 0 10px;
+}
+.subtab {
+  background: var(--bg-elev);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.subtab.active.subtab-lw { color: var(--accent); border-color: var(--accent); background: rgba(245,166,35,0.10); }
+.subtab.active.subtab-dw { color: #a78bfa; border-color: #a78bfa; background: rgba(167,139,250,0.10); }
+
 .loc-legend {
-  display: flex; flex-wrap: wrap; gap: 8px 14px;
-  padding: 8px 10px;
+  display: flex; flex-wrap: wrap; gap: 6px 10px;
+  padding: 6px 8px;
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: .5px;
+  letter-spacing: .3px;
+  margin-bottom: 8px;
 }
 .swatch {
   width: 10px; height: 10px;
   border-radius: 2px;
   display: inline-block;
+  margin-right: 4px;
+  vertical-align: -1px;
 }
 .swatch-available   { background: var(--avail); }
 .swatch-dark        { background: var(--avail-dark); }
@@ -457,7 +517,100 @@ main {
 .swatch-partial     { background: var(--partial); }
 .swatch-unavailable { background: var(--unavail); }
 .swatch-checked     { background: var(--checked); }
+.swatch-dungeon     { background: transparent; border: 2px solid var(--text-dim); }
+.legend-dungeon .swatch-dungeon { width: 8px; height: 8px; }
 
+/* Map panel — one per world, only the active one shows */
+.map-panel { display: none; }
+.map-panel.active { display: block; }
+
+/* The map container holds the image + an overlay div full of markers.
+   Width 100% of its parent; markers are absolutely positioned within.
+   We reserve a default aspect ratio so markers have space to land even
+   before the image loads (or if it never does). ALttP overworld map
+   images are very close to square, hence 1:1. */
+.map-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--bg-elev);
+  line-height: 0;
+  margin-bottom: 12px;
+  user-select: none;
+  -webkit-user-select: none;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.map-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  border-radius: var(--radius-sm);
+}
+.map-markers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;  /* markers themselves are pointer-events: auto */
+}
+
+/* Marker — small square, color reflects availability state */
+.map-marker {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  margin-top: -6px;
+  border-radius: 2px;
+  border: 1px solid var(--bg);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform .08s;
+}
+.map-marker:active { transform: scale(1.4); }
+
+.map-marker.state-available   { background: var(--avail); }
+.map-marker.state-dark        { background: var(--avail-dark); }
+.map-marker.state-visible     { background: var(--visible); }
+.map-marker.state-partial     { background: var(--partial); }
+.map-marker.state-unavailable { background: var(--unavail); }
+.map-marker.state-checked {
+  background: var(--checked);
+  opacity: 0.5;
+}
+
+/* Dungeon markers render as a slightly larger ring so they stand out
+   from ordinary overworld checks. Inner fill still reflects state. */
+.map-marker.is-dungeon {
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  margin-top: -8px;
+  border-radius: 50%;
+  border: 2px solid var(--text);
+  box-shadow: 0 0 0 1px var(--bg), 0 0 6px rgba(0,0,0,0.5);
+}
+
+/* Tap target is bigger than the visible marker so fingers don't miss.
+   We add an invisible padding via ::before. */
+.map-marker::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 8px;
+}
+
+/* Tablet+ — cap the map width so it doesn't stretch absurdly wide */
+@media (min-width: 700px) {
+  .map-container { max-width: 640px; margin-left: auto; margin-right: auto; }
+}
+
+/* SM locations still use the card-list layout below the maps */
 .loc-list {
   display: grid;
   grid-template-columns: 1fr;
