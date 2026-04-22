@@ -215,6 +215,8 @@ const TARGETS = [
   { id: 'lw-mushroom',            map: 'lw', name: 'Mushroom (Lost Woods)' },
   { id: 'lw-lostwoods-hideout',   map: 'lw', name: 'Lost Woods Hideout' },
   { id: 'lw-lumberjacks',         map: 'lw', name: 'Lumberjacks Tree' },
+  { id: 'lw-graveyard-ledge',     map: 'lw', name: 'Graveyard Ledge' },
+  { id: 'lw-king-tomb',           map: 'lw', name: "King's Tomb" },
   { id: 'lw-old-man',             map: 'lw', name: 'Old Man (DM west)' },
   { id: 'lw-spectacle-rock-cave', map: 'lw', name: 'Spectacle Rock Cave' },
   { id: 'lw-spectacle-rock',      map: 'lw', name: 'Spectacle Rock' },
@@ -223,7 +225,13 @@ const TARGETS = [
   { id: 'lw-spiral-cave',         map: 'lw', name: 'Spiral Cave' },
   { id: 'lw-paradox-cave',        map: 'lw', name: 'Paradox Cave' },
   { id: 'lw-mimic-cave',          map: 'lw', name: 'Mimic Cave' },
-  { id: 'lw-king-tomb',           map: 'lw', name: "King's Tomb" },
+  { id: 'lw-waterfall-fairy',     map: 'lw', name: 'Waterfall Fairy' },
+  { id: 'lw-zora',                map: 'lw', name: "Zora's Ledge" },
+  { id: 'lw-king-zora',           map: 'lw', name: 'King Zora' },
+  { id: 'lw-potion-shop',         map: 'lw', name: 'Potion Shop (witch hut)' },
+  { id: 'lw-magic-bat',           map: 'lw', name: 'Magic Bat' },
+  { id: 'lw-sahasrahla-hut',      map: 'lw', name: "Sahasrahla's Hut" },
+  { id: 'lw-sahasrahla-reward',   map: 'lw', name: "Sahasrahla's Reward" },
   { id: 'lw-kakariko-well',       map: 'lw', name: 'Kakariko Well' },
   { id: 'lw-blinds-hideout',      map: 'lw', name: "Blind's Hideout" },
   { id: 'lw-bottle-merchant',     map: 'lw', name: 'Bottle Merchant' },
@@ -231,6 +239,11 @@ const TARGETS = [
   { id: 'lw-sick-kid',            map: 'lw', name: 'Sick Kid' },
   { id: 'lw-library',             map: 'lw', name: 'Library' },
   { id: 'lw-kakariko-tavern',     map: 'lw', name: 'Kakariko Tavern' },
+  { id: 'lw-pegasus-rocks',       map: 'lw', name: 'Pegasus Rocks' },
+  { id: 'lw-links-uncle',         map: 'lw', name: "Link's Uncle" },
+  { id: 'lw-secret-passage',      map: 'lw', name: 'Secret Passage' },
+  { id: 'lw-links-house',         map: 'lw', name: "Link's House" },
+  { id: 'lw-floodgate',           map: 'lw', name: 'Floodgate Chest' },
   { id: 'lw-maze-race',           map: 'lw', name: 'Maze Race' },
   { id: 'lw-cave45',              map: 'lw', name: 'Cave 45' },
   { id: 'lw-aginah',              map: 'lw', name: "Aginah's Cave" },
@@ -239,13 +252,10 @@ const TARGETS = [
   { id: 'lw-checkerboard',        map: 'lw', name: 'Checkerboard Cave' },
   { id: 'lw-bombos-tablet',       map: 'lw', name: 'Bombos Tablet' },
   { id: 'lw-sunken-treasure',     map: 'lw', name: 'Sunken Treasure' },
+  { id: 'lw-hobo',                map: 'lw', name: 'Hobo (under bridge)' },
   { id: 'lw-lake-hylia-island',   map: 'lw', name: 'Lake Hylia Island' },
   { id: 'lw-ice-rod-cave',        map: 'lw', name: 'Ice Rod Cave' },
   { id: 'lw-mini-moldorm',        map: 'lw', name: 'Mini-Moldorm Cave' },
-  { id: 'lw-waterfall-fairy',     map: 'lw', name: 'Waterfall Fairy' },
-  { id: 'lw-zora',                map: 'lw', name: "Zora's Ledge" },
-  { id: 'lw-sahasrahla-hut',      map: 'lw', name: "Sahasrahla's Hut" },
-  { id: 'lw-sahasrahla-reward',   map: 'lw', name: "Sahasrahla's Reward" },
 
   // ---- LW dungeon entrances ----
   { id: 'dung-ep',  map: 'lw', name: 'Eastern Palace (entrance)',  dungeon: true },
@@ -304,6 +314,23 @@ try {
     if (p.currentMap && MAPS.includes(p.currentMap)) currentMap = p.currentMap;
   }
 } catch (e) {}
+
+// After restoring state, advance currentIdx on each map to the first
+// target that doesn't yet have coords. This way, when new targets are
+// added to the list, the calibrator automatically jumps to them instead
+// of sitting on "all done" or re-pointing at a completed target.
+MAPS.forEach(m => {
+  const targets = targetsByMap[m];
+  const firstMissing = targets.findIndex(t => !coords[t.id]);
+  if (firstMissing === -1) {
+    currentIdx[m] = targets.length;  // all done
+  } else {
+    currentIdx[m] = firstMissing;
+  }
+});
+// Land on whichever map still has unplaced pins
+if (currentIdx.lw < targetsByMap.lw.length) currentMap = 'lw';
+else if (currentIdx.dw < targetsByMap.dw.length) currentMap = 'dw';
 
 function save() {
   try { localStorage.setItem(STORAGE, JSON.stringify({ coords, currentIdx, currentMap })); } catch (e) {}
