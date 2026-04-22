@@ -31,8 +31,8 @@ const Z3_ITEMS = [
   // Row 1 — consumables/throwables
   { id: 'bow',       kind: 'level', max: 2, label: 'Bow',       glyph: '⤭', tip: 'Bow → Silvers',
     img: [IMG_Z3+'bow.png', IMG_Z3+'silvers.png'] },
-  { id: 'boomerang', kind: 'level', max: 3, label: 'Boomer.',   glyph: '↺', tip: 'Blue → Red → Both',
-    img: [IMG_Z3+'boomerang.png', IMG_Z3+'boomerang2.png', IMG_Z3+'boomerang3.png'] },
+  { id: 'boomerang', kind: 'level', max: 2, label: 'Boomer.',   glyph: '↺', tip: 'None → Boomerang 1 → Boomerang 2',
+    img: [IMG_Z3+'boomerang1.png', IMG_Z3+'boomerang2.png'] },
   { id: 'hookshot',  kind: 'bool',           label: 'Hookshot', glyph: '⚓', img: IMG_Z3+'hookshot.png' },
   { id: 'powder',    kind: 'bool',           label: 'Powder',   glyph: '❋', img: IMG_Z3+'powder.png' },
   { id: 'mushroom',  kind: 'bool',           label: 'Mushroom', glyph: '✿', img: IMG_Z3+'mushroom.png' },
@@ -330,22 +330,43 @@ const DUNGEON_FALLBACKS = {
   gt: ['Ganon\'s','Tower'],
 };
 
-// Cycle through prize values on each tap: 0 (crystal default) →
-// 1 (green) → 2 (red/blue pendant) → 4 (red crystal 5/6) → 0 (crystal) ...
-// Per user spec: crystal is default; no separate "unknown" state.
-const PRIZE_CYCLE = [0, 1, 2, 4];
+// Prize codes (1:1 with sprite filenames in images/prizes/):
+//   0 = dungeon0.png — blue crystal (default for most dungeons)
+//   1 = dungeon1.png — red crystal (Crystal 5/6)
+//   2 = dungeon2.png — red/blue pendant
+//   3 = dungeon3.png — green pendant
+//   4 = dungeon4.png — metroid boss prize (SM bosses in crossover seeds)
+const IMG_PRIZES = 'images/prizes/';
+const PRIZE_SRC = [
+  IMG_PRIZES + 'dungeon0.png',
+  IMG_PRIZES + 'dungeon1.png',
+  IMG_PRIZES + 'dungeon2.png',
+  IMG_PRIZES + 'dungeon3.png',
+  IMG_PRIZES + 'dungeon4.png',
+];
+// Glyph fallback, used only if the prize image fails to load
+const PRIZE_FALLBACK_GLYPH = ['◇', '◇', '◆', '◆', 'M'];
+
+// Tap-to-cycle order: straight walk 0 → 1 → 2 → 3 → 4 → 0 …
+const PRIZE_CYCLE = [0, 1, 2, 3, 4];
 function nextPrize(current) {
   const i = PRIZE_CYCLE.indexOf(current);
   return PRIZE_CYCLE[(i + 1) % PRIZE_CYCLE.length];
 }
 
+// Medallion sprites — reused from the Items tab's images/zelda3/ folder.
+// Index 0 = unknown (rendered as '?' glyph with no sprite), 1–3 map to
+// the actual medallion PNGs.
+const MED_SRC = [
+  null,                       // 0 = unknown
+  IMG_Z3 + 'bombos.png',      // 1
+  IMG_Z3 + 'ether.png',       // 2
+  IMG_Z3 + 'quake.png',       // 3
+];
+
 // Medallion cycles: 0 (unknown) → 1 (bombos) → 2 (ether) → 3 (quake) → 0 ...
 function nextMed(current) { return ((current || 0) + 1) % 4; }
 
-function prizeGlyph(p) {
-  // 0 = crystal (default), 1 = green, 2 = red/blue pendant, 4 = red crystal
-  return { 0: '◇', 1: '◆', 2: '◆', 3: '◇', 4: '◇' }[p] || '◇';
-}
 function medGlyph(m) {
   return ['?', 'B', 'E', 'Q'][m] || '?';
 }
@@ -473,22 +494,49 @@ function buildBossCell(opts) {
     cell.appendChild(c);
   }
 
-  // Prize overlay
+  // Prize overlay — rendered as an image when possible, falling back to
+  // a small glyph if the image file is missing.
   if (opts.showPrize) {
     const p = document.createElement('div');
+    const prizeIdx = opts.prize || 0;
     p.className = 'boss-overlay boss-prize';
-    p.dataset.prize = opts.prize || 0;
-    p.textContent = prizeGlyph(opts.prize || 0);
+    p.dataset.prize = prizeIdx;
+    const pImg = document.createElement('img');
+    pImg.className = 'prize-img';
+    pImg.src = PRIZE_SRC[prizeIdx];
+    pImg.alt = '';
+    pImg.draggable = false;
+    pImg.addEventListener('error', () => {
+      pImg.remove();
+      p.textContent = PRIZE_FALLBACK_GLYPH[prizeIdx] || '?';
+    });
+    p.appendChild(pImg);
     p.addEventListener('click', (e) => { e.stopPropagation(); opts.onPrizeTap && opts.onPrizeTap(); });
     cell.appendChild(p);
   }
 
-  // Medallion overlay (MM/TR only)
+  // Medallion overlay (MM/TR only) — rendered as the actual medallion
+  // sprite from images/zelda3/ (bombos/ether/quake). Index 0 = unknown,
+  // shown as a small '?' glyph with no image.
   if (opts.showMed) {
     const m = document.createElement('div');
+    const medIdx = opts.medallion || 0;
     m.className = 'boss-overlay boss-med';
-    m.dataset.med = opts.medallion || 0;
-    m.textContent = medGlyph(opts.medallion || 0);
+    m.dataset.med = medIdx;
+    if (medIdx > 0) {
+      const mImg = document.createElement('img');
+      mImg.className = 'med-img';
+      mImg.src = MED_SRC[medIdx];
+      mImg.alt = '';
+      mImg.draggable = false;
+      mImg.addEventListener('error', () => {
+        mImg.remove();
+        m.textContent = medGlyph(medIdx);
+      });
+      m.appendChild(mImg);
+    } else {
+      m.textContent = medGlyph(medIdx);
+    }
     m.addEventListener('click', (e) => { e.stopPropagation(); opts.onMedTap && opts.onMedTap(); });
     cell.appendChild(m);
   }
@@ -511,18 +559,193 @@ function appendFallback(cell, lines) {
 
 /* ---------- Rendering: locations ---------- */
 
+// Map image sources. Set the <img src> once on setup — the images
+// cache and only load once per PWA install.
+const MAP_IMG_SRC = {
+  lw: 'images/maps/lightworld.png',
+  dw: 'images/maps/darkworld.png',
+};
+
+// Calibrated coordinates produced by the calibrate.html tool. Values are
+// percentages of the map image's natural dimensions, so markers scale
+// correctly regardless of the rendered map size.
+const MAP_COORDS = {
+  // ---- Light World overworld ----
+  "lw-pedestal":            { map: "lw", x: 4.10,  y: 3.56 },
+  "lw-mushroom":            { map: "lw", x: 12.31, y: 8.42 },
+  "lw-lostwoods-hideout":   { map: "lw", x: 19.01, y: 13.07 },
+  "lw-lumberjacks":         { map: "lw", x: 33.15, y: 2.48 },
+  "lw-graveyard-ledge":     { map: "lw", x: 56.59, y: 27.86 },
+  "lw-king-tomb":           { map: "lw", x: 60.26, y: 29.48 },
+  "lw-old-man":             { map: "lw", x: 40.60, y: 18.79 },
+  "lw-spectacle-rock-cave": { map: "lw", x: 48.81, y: 14.36 },
+  "lw-spectacle-rock":      { map: "lw", x: 50.76, y: 8.21 },
+  "lw-ether-tablet":        { map: "lw", x: 42.01, y: 1.73 },
+  "lw-floating-island":     { map: "lw", x: 81.21, y: 1.94 },
+  "lw-spiral-cave":         { map: "lw", x: 79.59, y: 8.42 },
+  "lw-paradox-cave":        { map: "lw", x: 86.29, y: 20.84 },
+  "lw-mimic-cave":          { map: "lw", x: 84.34, y: 8.42 },
+  "lw-waterfall-fairy":     { map: "lw", x: 90.06, y: 13.28 },
+  "lw-zora":                { map: "lw", x: 95.14, y: 12.74 },
+  "lw-king-zora":           { map: "lw", x: 96.54, y: 12.74 },
+  "lw-potion-shop":         { map: "lw", x: 80.02, y: 32.83 },
+  "lw-magic-bat":           { map: "lw", x: 32.51, y: 56.16 },
+  "lw-sahasrahla-hut":      { map: "lw", x: 80.35, y: 44.06 },
+  "lw-sahasrahla-reward":   { map: "lw", x: 81.86, y: 44.06 },
+  "lw-kakariko-well":       { map: "lw", x: 2.27,  y: 42.55 },
+  "lw-blinds-hideout":      { map: "lw", x: 12.85, y: 41.25 },
+  "lw-bottle-merchant":     { map: "lw", x: 9.50,  y: 46.44 },
+  "lw-chicken-house":       { map: "lw", x: 11.34, y: 53.02 },
+  "lw-sick-kid":            { map: "lw", x: 15.55, y: 52.59 },
+  "lw-library":             { map: "lw", x: 15.66, y: 64.90 },
+  "lw-kakariko-tavern":     { map: "lw", x: 15.98, y: 57.02 },
+  "lw-pegasus-rocks":       { map: "lw", x: 39.09, y: 29.27 },
+  "lw-links-uncle":         { map: "lw", x: 59.61, y: 40.82 },
+  "lw-secret-passage":      { map: "lw", x: 55.08, y: 42.33 },
+  "lw-links-house":         { map: "lw", x: 54.64, y: 67.49 },
+  "lw-floodgate":           { map: "lw", x: 46.87, y: 93.09 },
+  "lw-maze-race":           { map: "lw", x: 3.24,  y: 69.87 },
+  "lw-cave45":              { map: "lw", x: 26.57, y: 81.86 },
+  "lw-aginah":              { map: "lw", x: 19.87, y: 81.75 },
+  "lw-flute-spot":          { map: "lw", x: 28.94, y: 66.09 },
+  "lw-desert-ledge":        { map: "lw", x: 2.38,  y: 90.93 },
+  "lw-checkerboard":        { map: "lw", x: 17.60, y: 77.65 },
+  "lw-bombos-tablet":       { map: "lw", x: 22.03, y: 92.12 },
+  "lw-sunken-treasure":     { map: "lw", x: 45.25, y: 93.20 },
+  "lw-hobo":                { map: "lw", x: 70.84, y: 69.98 },
+  "lw-lake-hylia-island":   { map: "lw", x: 72.79, y: 83.15 },
+  "lw-ice-rod-cave":        { map: "lw", x: 89.63, y: 76.89 },
+  "lw-mini-moldorm":        { map: "lw", x: 65.12, y: 93.63 },
+
+  // ---- LW dungeon entrances ----
+  "dung-ep":  { map: "lw", x: 95.79, y: 37.90, dungeon: true },
+  "dung-dp":  { map: "lw", x: 7.34,  y: 78.40, dungeon: true },
+  "dung-toh": { map: "lw", x: 55.94, y: 2.05,  dungeon: true },
+  "dung-hc":  { map: "lw", x: 50.11, y: 43.52, dungeon: true },
+  "dung-at":  { map: "lw", x: 50.11, y: 38.77, dungeon: true },
+
+  // ---- Dark World overworld ----
+  "dw-spike-cave":      { map: "dw", x: 57.45, y: 13.71 },
+  "dw-superbunny-cave": { map: "dw", x: 84.45, y: 13.82 },
+  "dw-hookshot-cave":   { map: "dw", x: 83.15, y: 6.48 },
+  "dw-catfish":         { map: "dw", x: 89.52, y: 17.06 },
+  "dw-pyramid":         { map: "dw", x: 58.10, y: 45.36 },
+  "dw-pyramid-fairy":   { map: "dw", x: 46.87, y: 47.84 },
+  "dw-bumper-cave":     { map: "dw", x: 34.02, y: 15.33 },
+  "dw-chest-game":      { map: "dw", x: 4.97,  y: 45.57 },
+  "dw-c-house":         { map: "dw", x: 20.63, y: 46.98 },
+  "dw-brewery":         { map: "dw", x: 10.91, y: 57.56 },
+  "dw-hammer-peg":      { map: "dw", x: 31.64, y: 60.48 },
+  "dw-purple-chest":    { map: "dw", x: 30.45, y: 52.16 },
+  "dw-blacksmith":      { map: "dw", x: 14.79, y: 66.20 },
+  "dw-mire-shed":       { map: "dw", x: 3.89,  y: 79.37 },
+  "dw-digging-game":    { map: "dw", x: 5.51,  y: 69.33 },
+  "dw-stumpy":          { map: "dw", x: 30.89, y: 68.36 },
+  "dw-hype-cave":       { map: "dw", x: 59.72, y: 77.65 },
+
+  // ---- DW dungeon entrances ----
+  "dung-pod": { map: "dw", x: 95.90, y: 38.12, dungeon: true },
+  "dung-sp":  { map: "dw", x: 46.87, y: 92.44, dungeon: true },
+  "dung-sw":  { map: "dw", x: 3.89,  y: 4.32,  dungeon: true },
+  "dung-tt":  { map: "dw", x: 12.42, y: 47.73, dungeon: true },
+  "dung-ip":  { map: "dw", x: 79.59, y: 87.04, dungeon: true },
+  "dung-mm":  { map: "dw", x: 7.45,  y: 81.21, dungeon: true },
+  "dung-tr":  { map: "dw", x: 94.17, y: 5.40,  dungeon: true },
+  "dung-gt":  { map: "dw", x: 56.26, y: 3.67,  dungeon: true },
+};
+
+// Mapping from dungeon id on the map → dungeon id in state.dungeons
+// (map ids have the dung- prefix; state ids don't).
+function dungeonIdFor(markerId) {
+  return markerId.startsWith('dung-') ? markerId.slice(5) : null;
+}
+
+let mapsInitialized = false;
+function ensureMapImages() {
+  if (mapsInitialized) return;
+  const lwImg = document.getElementById('map-lw-img');
+  const dwImg = document.getElementById('map-dw-img');
+  if (lwImg && !lwImg.src) lwImg.src = MAP_IMG_SRC.lw;
+  if (dwImg && !dwImg.src) dwImg.src = MAP_IMG_SRC.dw;
+  mapsInitialized = true;
+}
+
+// Compute the best state for a dungeon marker: use the current dungeon
+// availability as a stand-in. If boss is defeated and no chests remain,
+// show the "checked" state for quick visual confirmation.
+function dungeonMarkerState(dungId) {
+  const d = ALL_DUNGEONS[dungId];
+  const s = state.dungeons[dungId];
+  if (!d || !s) return ST.UNAVAIL;
+  if (s.boss && s.chests <= 0) return ST.CHECKED;
+  const result = d.check(state.items, s.chests, s.medallion);
+  // Prefer chest state when present, else boss state, else entry
+  if (result.chests !== undefined && result.chests !== null) return result.chests;
+  if (result.boss   !== undefined && result.boss   !== null) return result.boss;
+  return result.entry ? ST.AVAILABLE : ST.UNAVAIL;
+}
+
 function renderLocations() {
-  const lw = document.getElementById('locs-lw');
-  const dw = document.getElementById('locs-dw');
+  ensureMapImages();
+  renderMapMarkers('lw');
+  renderMapMarkers('dw');
+  renderSMLocationsList();
+}
+
+function renderMapMarkers(mapKey) {
+  const host = document.getElementById('markers-' + mapKey);
+  if (!host) return;
+  host.innerHTML = '';
+
+  Object.entries(MAP_COORDS).forEach(([id, coord]) => {
+    if (coord.map !== mapKey) return;
+
+    const isDungeon = !!coord.dungeon;
+    let st;
+    if (isDungeon) {
+      const dungId = dungeonIdFor(id);
+      st = dungeonMarkerState(dungId);
+    } else {
+      const loc = ALL_LOCATIONS.find(l => l.id === id);
+      if (!loc) return;  // no check defined — skip silently
+      const isChecked = !!state.checked[id];
+      st = isChecked ? ST.CHECKED : loc.check(state.items, state);
+    }
+
+    const m = document.createElement('div');
+    m.className = 'map-marker state-' + st + (isDungeon ? ' is-dungeon' : '');
+    m.style.left = coord.x + '%';
+    m.style.top  = coord.y + '%';
+    m.dataset.id = id;
+    // Show the location name on long-press / hover so the user can
+    // confirm they tapped the right thing
+    const label = isDungeon
+      ? (ALL_DUNGEONS[dungeonIdFor(id)]?.name || id)
+      : (ALL_LOCATIONS.find(l => l.id === id)?.name || id);
+    m.title = label;
+
+    m.addEventListener('click', () => {
+      if (isDungeon) {
+        // Jump to Dungeons tab so the user can toggle chests/boss/prize.
+        switchToTab('dungeons');
+      } else {
+        state.checked[id] = !state.checked[id];
+        saveState();
+        renderMapMarkers(mapKey);
+      }
+    });
+    host.appendChild(m);
+  });
+}
+
+function renderSMLocationsList() {
   const sm = document.getElementById('locs-sm');
-  lw.innerHTML = '';
-  dw.innerHTML = '';
+  if (!sm) return;
   sm.innerHTML = '';
-
   ALL_LOCATIONS.forEach(loc => {
+    if (loc.region !== 'Super Metroid') return;
     const isChecked = !!state.checked[loc.id];
-    let st = isChecked ? ST.CHECKED : loc.check(state.items, state);
-
+    const st = isChecked ? ST.CHECKED : loc.check(state.items, state);
     const node = document.createElement('div');
     node.className = 'location state-' + st;
     node.dataset.id = loc.id;
@@ -533,12 +756,9 @@ function renderLocations() {
     node.addEventListener('click', () => {
       state.checked[loc.id] = !state.checked[loc.id];
       saveState();
-      rerenderLocations();
+      renderSMLocationsList();
     });
-
-    if (loc.region === 'Light World') lw.appendChild(node);
-    else if (loc.region === 'Dark World') dw.appendChild(node);
-    else sm.appendChild(node);
+    sm.appendChild(node);
   });
 }
 
@@ -571,18 +791,37 @@ function rerenderAll() {
 
 /* ---------- Tabs ---------- */
 
+// Switch the main top-level tab (items / dungeons / locations).
+// Exposed so map markers can jump to Dungeons tab on tap.
+function switchToTab(key) {
+  document.querySelectorAll('.tab').forEach(t => {
+    const isActive = t.dataset.tab === key;
+    t.classList.toggle('active', isActive);
+    t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
+  document.querySelectorAll('.panel').forEach(p => {
+    p.classList.toggle('hidden', p.dataset.panel !== key);
+  });
+}
+
 function setupTabs() {
   document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => {
-        t.classList.remove('active');
-        t.setAttribute('aria-selected', 'false');
+    tab.addEventListener('click', () => switchToTab(tab.dataset.tab));
+  });
+}
+
+// Sub-tabs within the Locations panel (LW / DW map sub-views).
+function setupSubTabs() {
+  document.querySelectorAll('.subtab').forEach(st => {
+    st.addEventListener('click', () => {
+      const key = st.dataset.subtab;
+      document.querySelectorAll('.subtab').forEach(s => {
+        const active = s.dataset.subtab === key;
+        s.classList.toggle('active', active);
+        s.setAttribute('aria-selected', active ? 'true' : 'false');
       });
-      tab.classList.add('active');
-      tab.setAttribute('aria-selected', 'true');
-      const key = tab.dataset.tab;
-      document.querySelectorAll('.panel').forEach(p => {
-        p.classList.toggle('hidden', p.dataset.panel !== key);
+      document.querySelectorAll('.map-panel').forEach(p => {
+        p.classList.toggle('active', p.dataset.map === key);
       });
     });
   });
@@ -631,6 +870,7 @@ function setupMedallionModal() { /* no-op; medallion cycling is now inline tap *
 
 function init() {
   setupTabs();
+  setupSubTabs();
   setupReset();
   setupSettings();
   rerenderAll();
