@@ -69,7 +69,7 @@
       <div class="legend-item"><span class="dot dot-chests"></span>Chests left</div>
       <div class="legend-item"><span class="dot dot-boss"></span>Tap sprite: boss</div>
       <div class="legend-item"><span class="dot dot-prize"></span>Tap ◇: prize</div>
-      <div class="legend-item"><span class="dot dot-med"></span>Tap △: medallion</div>
+      <div class="legend-item"><span class="dot dot-med"></span>Tap ○: medallion</div>
     </div>
     <div class="boss-grid" id="z3-dungeons"></div>
   </div>
@@ -84,27 +84,40 @@
 <!-- ============ LOCATIONS TAB ============ -->
 <section class="panel hidden" id="panel-locations" data-panel="locations">
 
-  <div class="section">
-    <div class="loc-legend">
-      <div class="legend-item"><span class="swatch swatch-available"></span>Available</div>
-      <div class="legend-item"><span class="swatch swatch-dark"></span>Available (dark room)</div>
-      <div class="legend-item"><span class="swatch swatch-visible"></span>Visible only</div>
-      <div class="legend-item"><span class="swatch swatch-partial"></span>Partial access</div>
-      <div class="legend-item"><span class="swatch swatch-unavailable"></span>Unreachable</div>
-      <div class="legend-item"><span class="swatch swatch-checked"></span>Checked</div>
+  <!-- Sub-tabs for Light World / Dark World -->
+  <div class="subtabs" role="tablist">
+    <button class="subtab subtab-lw active" data-subtab="lw" role="tab" aria-selected="true">Light World</button>
+    <button class="subtab subtab-dw" data-subtab="dw" role="tab" aria-selected="false">Dark World</button>
+  </div>
+
+  <!-- Tiny legend strip so you know what the marker colors mean -->
+  <div class="loc-legend">
+    <div class="legend-item"><span class="swatch swatch-available"></span>Avail</div>
+    <div class="legend-item"><span class="swatch swatch-dark"></span>Dark</div>
+    <div class="legend-item"><span class="swatch swatch-visible"></span>Visible</div>
+    <div class="legend-item"><span class="swatch swatch-partial"></span>Partial</div>
+    <div class="legend-item"><span class="swatch swatch-unavailable"></span>Unreach</div>
+    <div class="legend-item"><span class="swatch swatch-checked"></span>Checked</div>
+    <div class="legend-item legend-dungeon"><span class="swatch swatch-dungeon"></span>Dungeon</div>
+  </div>
+
+  <!-- Light World map -->
+  <div class="map-panel active" data-map="lw">
+    <div class="map-container" id="map-lw">
+      <img class="map-img" id="map-lw-img" alt="Light World map">
+      <div class="map-markers" id="markers-lw"></div>
     </div>
   </div>
 
-  <div class="section">
-    <h2 class="section-title">Light World</h2>
-    <div class="loc-list" id="locs-lw"></div>
+  <!-- Dark World map -->
+  <div class="map-panel" data-map="dw">
+    <div class="map-container" id="map-dw">
+      <img class="map-img" id="map-dw-img" alt="Dark World map">
+      <div class="map-markers" id="markers-dw"></div>
+    </div>
   </div>
 
-  <div class="section">
-    <h2 class="section-title">Dark World</h2>
-    <div class="loc-list" id="locs-dw"></div>
-  </div>
-
+  <!-- SM locations still use the list view for now -->
   <div class="section">
     <h2 class="section-title">Super Metroid</h2>
     <div class="loc-list" id="locs-sm"></div>
