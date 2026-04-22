@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SMZ3 Map Calibrator</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-elev: #141a22;
+    --border: #222c38;
+    --text: #e6edf3;
+    --text-dim: #8b98a5;
+    --accent: #f5a623;
+    --success: #4ade80;
+    --danger: #ef4444;
+    --lw: #f5a623;
+    --dw: #a78bfa;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 14px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+    background: rgba(13,17,23,0.95);
+    backdrop-filter: blur(10px);
+    z-index: 10;
+  }
+  h1 { margin: 0 0 4px; font-size: 16px; letter-spacing: 1px; }
+  .sub { color: var(--text-dim); font-size: 11px; letter-spacing: 0.5px; }
+
+  /* Tab bar */
+  .tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 10px;
+    position: sticky;
+    top: 60px;
+    background: rgba(13,17,23,0.95);
+    backdrop-filter: blur(10px);
+    z-index: 9;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    background: var(--bg-elev);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 8px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .tab.active.tab-lw { color: var(--lw); border-color: var(--lw); background: rgba(245,166,35,0.1); }
+  .tab.active.tab-dw { color: var(--dw); border-color: var(--dw); background: rgba(167,139,250,0.1); }
+  .tab .count {
+    display: inline-block;
+    font-size: 10px;
+    margin-left: 6px;
+    opacity: 0.7;
+    font-weight: 600;
+  }
+
+  .queue {
+    padding: 12px 16px;
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+  }
+  .queue-status { color: var(--text-dim); font-size: 11px; margin-bottom: 6px; }
+  .queue-target {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .queue-region { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+  .controls {
+    display: flex; gap: 6px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 8px 12px;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .btn:active { border-color: var(--accent); color: var(--accent); }
+  .btn-primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 800; }
+  .btn-danger  { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+  .map-panel { padding: 8px; display: none; }
+  .map-panel.active { display: block; }
+  .map-container {
+    position: relative;
+    width: 100%;
+    cursor: crosshair;
+    line-height: 0;
+  }
+  .map-container img {
+    width: 100%;
+    height: auto;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+  .pin {
+    position: absolute;
+    width: 14px; height: 14px;
+    margin-left: -7px; margin-top: -7px;
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+    pointer-events: none;
+  }
+  .pin-done      { background: var(--success); }
+  .pin-current   { background: var(--accent); box-shadow: 0 0 0 3px rgba(245,166,35,0.4); animation: pulse 1.2s infinite; }
+  .pin-dungeon   { width: 18px; height: 18px; margin-left: -9px; margin-top: -9px; }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+
+  .output {
+    padding: 16px;
+    border-top: 2px solid var(--border);
+  }
+  .output h2 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 240px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px;
+    font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    resize: vertical;
+  }
+
+  .no-image {
+    padding: 40px 20px; text-align: center; color: var(--text-dim);
+    font-size: 13px; line-height: 1.5;
+  }
+  .hint { color: var(--text-dim); font-size: 11px; margin-top: 8px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>◆ SMZ3 Map Calibrator</h1>
+  <div class="sub">Tap each target location on the appropriate map to record coordinates</div>
+</header>
+
+<div class="tabs">
+  <button class="tab tab-lw active" data-map="lw">Light World <span class="count" id="count-lw">0/0</span></button>
+  <button class="tab tab-dw" data-map="dw">Dark World <span class="count" id="count-dw">0/0</span></button>
+</div>
+
+<div class="queue">
+  <div class="queue-status" id="queue-status">Loading…</div>
+  <div class="queue-target" id="queue-target">&nbsp;</div>
+  <div class="queue-region" id="queue-region">&nbsp;</div>
+  <div class="controls">
+    <button class="btn" id="btn-prev">◀ Prev</button>
+    <button class="btn" id="btn-skip">Skip</button>
+    <button class="btn" id="btn-next">Next ▶</button>
+    <button class="btn btn-danger" id="btn-undo">Undo last</button>
+    <button class="btn btn-primary" id="btn-copy">Copy output</button>
+  </div>
+  <div class="hint">Tap the map to drop a pin at the current target — the queue auto-advances. Switch tabs at any time; each tab tracks only its own targets. Dungeon markers are slightly larger. Pinch to zoom for precision. Progress auto-saves.</div>
+</div>
+
+<div class="map-panel active" data-map="lw">
+  <div class="map-container" id="lw-container"></div>
+</div>
+
+<div class="map-panel" data-map="dw">
+  <div class="map-container" id="dw-container"></div>
+</div>
+
+<div class="output">
+  <h2>Generated coordinates</h2>
+  <textarea id="output" readonly></textarea>
+  <p class="hint">After you've placed all pins, copy this block and paste it into chat for the next step.</p>
+</div>
+
+<script>
+const TARGETS = [
+  // ---- Light World overworld ----
+  { id: 'lw-pedestal',            map: 'lw', name: 'Master Sword Pedestal' },
+  { id: 'lw-mushroom',            map: 'lw', name: 'Mushroom (Lost Woods)' },
+  { id: 'lw-lostwoods-hideout',   map: 'lw', name: 'Lost Woods Hideout' },
+  { id: 'lw-lumberjacks',         map: 'lw', name: 'Lumberjacks Tree' },
+  { id: 'lw-old-man',             map: 'lw', name: 'Old Man (DM west)' },
+  { id: 'lw-spectacle-rock-cave', map: 'lw', name: 'Spectacle Rock Cave' },
+  { id: 'lw-spectacle-rock',      map: 'lw', name: 'Spectacle Rock' },
+  { id: 'lw-ether-tablet',        map: 'lw', name: 'Ether Tablet' },
+  { id: 'lw-floating-island',     map: 'lw', name: 'Floating Island' },
+  { id: 'lw-spiral-cave',         map: 'lw', name: 'Spiral Cave' },
+  { id: 'lw-paradox-cave',        map: 'lw', name: 'Paradox Cave' },
+  { id: 'lw-mimic-cave',          map: 'lw', name: 'Mimic Cave' },
+  { id: 'lw-king-tomb',           map: 'lw', name: "King's Tomb" },
+  { id: 'lw-kakariko-well',       map: 'lw', name: 'Kakariko Well' },
+  { id: 'lw-blinds-hideout',      map: 'lw', name: "Blind's Hideout" },
+  { id: 'lw-bottle-merchant',     map: 'lw', name: 'Bottle Merchant' },
+  { id: 'lw-chicken-house',       map: 'lw', name: 'Chicken House' },
+  { id: 'lw-sick-kid',            map: 'lw', name: 'Sick Kid' },
+  { id: 'lw-library',             map: 'lw', name: 'Library' },
+  { id: 'lw-kakariko-tavern',     map: 'lw', name: 'Kakariko Tavern' },
+  { id: 'lw-maze-race',           map: 'lw', name: 'Maze Race' },
+  { id: 'lw-cave45',              map: 'lw', name: 'Cave 45' },
+  { id: 'lw-aginah',              map: 'lw', name: "Aginah's Cave" },
+  { id: 'lw-flute-spot',          map: 'lw', name: 'Flute Spot' },
+  { id: 'lw-desert-ledge',        map: 'lw', name: 'Desert Ledge' },
+  { id: 'lw-checkerboard',        map: 'lw', name: 'Checkerboard Cave' },
+  { id: 'lw-bombos-tablet',       map: 'lw', name: 'Bombos Tablet' },
+  { id: 'lw-sunken-treasure',     map: 'lw', name: 'Sunken Treasure' },
+  { id: 'lw-lake-hylia-island',   map: 'lw', name: 'Lake Hylia Island' },
+  { id: 'lw-ice-rod-cave',        map: 'lw', name: 'Ice Rod Cave' },
+  { id: 'lw-mini-moldorm',        map: 'lw', name: 'Mini-Moldorm Cave' },
+  { id: 'lw-waterfall-fairy',     map: 'lw', name: 'Waterfall Fairy' },
+  { id: 'lw-zora',                map: 'lw', name: "Zora's Ledge" },
+  { id: 'lw-sahasrahla-hut',      map: 'lw', name: "Sahasrahla's Hut" },
+  { id: 'lw-sahasrahla-reward',   map: 'lw', name: "Sahasrahla's Reward" },
+
+  // ---- LW dungeon entrances ----
+  { id: 'dung-ep',  map: 'lw', name: 'Eastern Palace (entrance)',  dungeon: true },
+  { id: 'dung-dp',  map: 'lw', name: 'Desert Palace (entrance)',    dungeon: true },
+  { id: 'dung-toh', map: 'lw', name: 'Tower of Hera (entrance)',    dungeon: true },
+  { id: 'dung-hc',  map: 'lw', name: 'Hyrule Castle (entrance)',    dungeon: true },
+  { id: 'dung-at',  map: 'lw', name: 'Castle Tower / Agahnim',      dungeon: true },
+
+  // ---- Dark World overworld ----
+  { id: 'dw-spike-cave',          map: 'dw', name: 'Byrna Spike Cave (DDM W)' },
+  { id: 'dw-superbunny-cave',     map: 'dw', name: 'Superbunny Cave (DDM E)' },
+  { id: 'dw-hookshot-cave',       map: 'dw', name: 'Hookshot Cave (DDM E)' },
+  { id: 'dw-catfish',             map: 'dw', name: 'Catfish (DW east)' },
+  { id: 'dw-pyramid',             map: 'dw', name: 'Pyramid (ledge)' },
+  { id: 'dw-pyramid-fairy',       map: 'dw', name: 'Pyramid Fairy' },
+  { id: 'dw-bumper-cave',         map: 'dw', name: 'Bumper Cave' },
+  { id: 'dw-chest-game',          map: 'dw', name: 'Chest Game (Village)' },
+  { id: 'dw-c-house',             map: 'dw', name: 'C-House' },
+  { id: 'dw-brewery',             map: 'dw', name: 'Brewery' },
+  { id: 'dw-hammer-peg',          map: 'dw', name: 'Hammer Pegs Cave' },
+  { id: 'dw-purple-chest',        map: 'dw', name: 'Purple Chest' },
+  { id: 'dw-blacksmith',          map: 'dw', name: 'Blacksmith' },
+  { id: 'dw-mire-shed',           map: 'dw', name: 'Mire Shed' },
+  { id: 'dw-digging-game',        map: 'dw', name: 'Digging Game' },
+  { id: 'dw-stumpy',              map: 'dw', name: 'Stumpy' },
+  { id: 'dw-hype-cave',           map: 'dw', name: 'Hype Cave' },
+
+  // ---- DW dungeon entrances ----
+  { id: 'dung-pod', map: 'dw', name: 'Palace of Darkness',   dungeon: true },
+  { id: 'dung-sp',  map: 'dw', name: 'Swamp Palace',         dungeon: true },
+  { id: 'dung-sw',  map: 'dw', name: 'Skull Woods',          dungeon: true },
+  { id: 'dung-tt',  map: 'dw', name: "Thieves' Town",        dungeon: true },
+  { id: 'dung-ip',  map: 'dw', name: 'Ice Palace',           dungeon: true },
+  { id: 'dung-mm',  map: 'dw', name: 'Misery Mire',          dungeon: true },
+  { id: 'dung-tr',  map: 'dw', name: 'Turtle Rock',          dungeon: true },
+  { id: 'dung-gt',  map: 'dw', name: "Ganon's Tower",        dungeon: true },
+];
+
+const MAPS = ['lw', 'dw'];
+const targetsByMap = {
+  lw: TARGETS.filter(t => t.map === 'lw'),
+  dw: TARGETS.filter(t => t.map === 'dw'),
+};
+const coords = {};
+let currentMap = 'lw';
+const currentIdx = { lw: 0, dw: 0 };
+const containers = {};
+
+const STORAGE = 'smz3-map-calibrator-v2';
+try {
+  const saved = localStorage.getItem(STORAGE);
+  if (saved) {
+    const p = JSON.parse(saved);
+    Object.assign(coords, p.coords || {});
+    if (p.currentIdx) Object.assign(currentIdx, p.currentIdx);
+    if (p.currentMap && MAPS.includes(p.currentMap)) currentMap = p.currentMap;
+  }
+} catch (e) {}
+
+function save() {
+  try { localStorage.setItem(STORAGE, JSON.stringify({ coords, currentIdx, currentMap })); } catch (e) {}
+}
+
+const MAP_FILES = {
+  lw: 'images/maps/lightworld.png',
+  dw: 'images/maps/darkworld.png',
+};
+
+function setupMap(mapKey) {
+  const container = document.getElementById(mapKey + '-container');
+  containers[mapKey] = container;
+  const img = new Image();
+  img.src = MAP_FILES[mapKey];
+  img.alt = mapKey === 'lw' ? 'Light World map' : 'Dark World map';
+  img.onerror = () => {
+    container.innerHTML = `<div class="no-image">Couldn't load <code>${MAP_FILES[mapKey]}</code>.<br>Make sure the file exists and this page is served from the tracker folder (not opened directly from the filesystem).</div>`;
+  };
+  img.onload = () => {
+    container.appendChild(img);
+    renderPins(mapKey);
+    container.addEventListener('click', (ev) => onMapTap(mapKey, ev));
+  };
+}
+
+function onMapTap(mapKey, ev) {
+  if (mapKey !== currentMap) return;
+  const targets = targetsByMap[mapKey];
+  const idx = currentIdx[mapKey];
+  if (idx >= targets.length) return;
+  const img = containers[mapKey].querySelector('img');
+  if (!img) return;
+  const rect = img.getBoundingClientRect();
+  const x = ((ev.clientX - rect.left) / rect.width) * 100;
+  const y = ((ev.clientY - rect.top) / rect.height) * 100;
+  const t = targets[idx];
+  coords[t.id] = { x: +x.toFixed(2), y: +y.toFixed(2) };
+  advance(mapKey);
+  save();
+  renderPins(mapKey);
+  updateUI();
+}
+
+function renderPins(mapKey) {
+  const container = containers[mapKey];
+  if (!container) return;
+  container.querySelectorAll('.pin').forEach(n => n.remove());
+  const targets = targetsByMap[mapKey];
+  targets.forEach((t, i) => {
+    const c = coords[t.id];
+    if (!c) return;
+    const pin = document.createElement('div');
+    let cls = 'pin ';
+    cls += (i === currentIdx[mapKey]) ? 'pin-current' : 'pin-done';
+    if (t.dungeon) cls += ' pin-dungeon';
+    pin.className = cls;
+    pin.style.left = c.x + '%';
+    pin.style.top  = c.y + '%';
+    pin.title = t.name;
+    container.appendChild(pin);
+  });
+}
+
+function advance(mapKey) {
+  const targets = targetsByMap[mapKey];
+  if (currentIdx[mapKey] < targets.length - 1) currentIdx[mapKey]++;
+  else currentIdx[mapKey] = targets.length;
+}
+
+function switchTab(mapKey) {
+  if (!MAPS.includes(mapKey)) return;
+  currentMap = mapKey;
+  save();
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.map === mapKey);
+  });
+  document.querySelectorAll('.map-panel').forEach(p => {
+    p.classList.toggle('active', p.dataset.map === mapKey);
+  });
+  renderPins(mapKey);
+  updateUI();
+}
+
+function updateUI() {
+  MAPS.forEach(m => {
+    const targets = targetsByMap[m];
+    const done = targets.filter(t => coords[t.id]).length;
+    const el = document.getElementById('count-' + m);
+    if (el) el.textContent = `${done}/${targets.length}`;
+  });
+
+  const targets = targetsByMap[currentMap];
+  const done = targets.filter(t => coords[t.id]).length;
+  document.getElementById('queue-status').textContent =
+    `${currentMap.toUpperCase()} · ${done}/${targets.length} placed · ${targets.length - done} remaining`;
+
+  const idx = currentIdx[currentMap];
+  if (idx >= targets.length) {
+    document.getElementById('queue-target').textContent = '✓ This map done';
+    document.getElementById('queue-region').textContent = 'switch tabs, or copy output below';
+  } else {
+    const t = targets[idx];
+    document.getElementById('queue-target').textContent =
+      `[${idx + 1}/${targets.length}] ${t.name}${t.dungeon ? '  ◆ dungeon' : ''}`;
+    document.getElementById('queue-region').textContent = currentMap.toUpperCase();
+  }
+  updateOutput();
+}
+
+function updateOutput() {
+  const lines = ['// ---- Map coordinates (generated by calibrator) ----'];
+  lines.push('const MAP_COORDS = {');
+  TARGETS.forEach(t => {
+    const c = coords[t.id];
+    if (!c) return;
+    const dungeonNote = t.dungeon ? '  [dungeon]' : '';
+    lines.push(`  "${t.id}": { map: "${t.map}", x: ${c.x}, y: ${c.y} },  // ${t.name}${dungeonNote}`);
+  });
+  lines.push('};');
+  document.getElementById('output').value = lines.join('\n');
+}
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (currentIdx[currentMap] > 0) currentIdx[currentMap]--;
+  save(); renderPins(currentMap); updateUI();
+});
+document.getElementById('btn-skip').addEventListener('click', () => {
+  advance(currentMap); save(); renderPins(currentMap); updateUI();
+});
+document.getElementById('btn-next').addEventListener('click', () => {
+  advance(currentMap); save(); renderPins(currentMap); updateUI();
+});
+document.getElementById('btn-undo').addEventListener('click', () => {
+  if (currentIdx[currentMap] === 0) return;
+  const prev = targetsByMap[currentMap][currentIdx[currentMap] - 1];
+  delete coords[prev.id];
+  currentIdx[currentMap]--;
+  save(); renderPins(currentMap); updateUI();
+});
+document.getElementById('btn-copy').addEventListener('click', async () => {
+  const ta = document.getElementById('output');
+  try {
+    await navigator.clipboard.writeText(ta.value);
+    const b = document.getElementById('btn-copy');
+    const orig = b.textContent;
+    b.textContent = '✓ Copied';
+    setTimeout(() => { b.textContent = orig; }, 1200);
+  } catch (e) { ta.select(); }
+});
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => switchTab(t.dataset.map));
+});
+
+MAPS.forEach(setupMap);
+switchTab(currentMap);
+updateUI();
+</script>
+
+</body>
+</html>
