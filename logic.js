@@ -478,11 +478,10 @@ const LOCATIONS = [
   /* ---- Light World ---- */
   { id: 'lw-pedestal', region: 'Light World', name: 'Master Sword Pedestal',
     check: (i, st) => {
-      const green = st.dungeons.ep?.prize === 1;
-      const rb = st.dungeons.dp?.prize === 2 || st.dungeons.toh?.prize === 2;
-      const red = st.dungeons.ep?.prize === 2 || st.dungeons.dp?.prize === 2 || st.dungeons.toh?.prize === 2;
+      // Prize codes: 0=blue crystal, 1=red crystal, 2=red/blue pendant,
+      // 3=green pendant, 4=metroid boss. Pedestal needs all 3 pendants.
       const prizes = [st.dungeons.ep?.prize, st.dungeons.dp?.prize, st.dungeons.toh?.prize];
-      const pendants = prizes.filter(p => p === 1 || p === 2).length;
+      const pendants = prizes.filter(p => p === 2 || p === 3).length;
       if (pendants >= 3) return STATE.AVAILABLE;
       if (has(i, 'book')) return STATE.VISIBLE;
       return STATE.UNAVAIL;
@@ -591,16 +590,50 @@ const LOCATIONS = [
   { id: 'lw-ice-rod-cave', region: 'Light World', name: 'Ice Rod Cave',
     check: () => STATE.AVAILABLE },
   { id: 'lw-sahasrahla-reward', region: 'Light World', name: "Sahasrahla's Reward",
-    check: (i, st) => st.dungeons.ep?.prize === 1 ? STATE.AVAILABLE : STATE.UNAVAIL },
+    check: (i, st) => st.dungeons.ep?.prize === 3 ? STATE.AVAILABLE : STATE.UNAVAIL },
   { id: 'lw-sahasrahla-hut', region: 'Light World', name: "Sahasrahla's Hut",
     check: () => STATE.AVAILABLE },
+
+  /* ---- Light World: newly added from the MapleQueen guide cross-check ---- */
+  { id: 'lw-links-uncle', region: 'Light World', name: "Link's Uncle",
+    check: () => STATE.AVAILABLE },
+  { id: 'lw-secret-passage', region: 'Light World', name: 'Secret Passage',
+    check: () => STATE.AVAILABLE },
+  { id: 'lw-links-house', region: 'Light World', name: "Link's House",
+    check: () => STATE.AVAILABLE },
+  { id: 'lw-graveyard-ledge', region: 'Light World', name: 'Graveyard Ledge',
+    // Need boots to dash into the grave, then accessed from DW via mirror
+    // OR glitch-less vanilla path (skipped for now). Treat same shape as King's Tomb.
+    check: (i) => {
+      if (!has(i, 'boots')) return STATE.UNAVAIL;
+      if (has(i, 'mirror') && canEnterDarkWorld(i)) return STATE.AVAILABLE;
+      return STATE.VISIBLE;
+    } },
+  { id: 'lw-pegasus-rocks', region: 'Light World', name: 'Pegasus Rocks',
+    check: (i) => has(i, 'boots') ? STATE.AVAILABLE : STATE.VISIBLE },
+  { id: 'lw-king-zora', region: 'Light World', name: 'King Zora',
+    // Pay 500 rupees — reachable with any glove (to climb around the cliff)
+    check: (i) => anyGlove(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'lw-potion-shop', region: 'Light World', name: 'Potion Shop',
+    // The witch gives you one free item once you deliver her the mushroom
+    check: (i) => has(i, 'mushroom') ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'lw-magic-bat', region: 'Light World', name: 'Magic Bat',
+    // Needs powder (to wake the bat) and hammer (to smash hammer pegs on the way)
+    check: (i) => (has(i, 'powder') && has(i, 'hammer')) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'lw-floodgate', region: 'Light World', name: 'Floodgate Chest',
+    // Chest on the ledge near the floodgate control — reachable once you
+    // can get to the swamp region. Always available in standard rules.
+    check: () => STATE.AVAILABLE },
+  { id: 'lw-hobo', region: 'Light World', name: 'Hobo (under bridge)',
+    // Under the bridge near Lake Hylia — need flippers to swim there
+    check: (i) => has(i, 'flippers') ? STATE.AVAILABLE : STATE.UNAVAIL },
 
   /* ---- Dark World ---- */
   { id: 'dw-pyramid-fairy', region: 'Dark World', name: 'Pyramid Fairy',
     check: (i, st) => {
       if (!canReachPyramid(i) || !has(i, 'mirror')) return STATE.UNAVAIL;
-      // Need to have rescued the 2 dwarves = need crystals 5+6 (red crystals)
-      const redCount = Object.values(st.dungeons).filter(d => d.prize === 4).length;
+      // Need to have rescued the 2 dwarves = need crystals 5+6 (red crystals, prize code 1)
+      const redCount = Object.values(st.dungeons).filter(d => d.prize === 1).length;
       if (redCount < 2) return STATE.UNAVAIL;
       return has(i, 'hammer') || canReachDWViaAgahnim(i) ? STATE.AVAILABLE : STATE.UNAVAIL;
     } },
