@@ -387,9 +387,10 @@ function renderDungeons() {
       chestsTotal:  d.totalChests,
       showChests:   d.totalChests > 0,
       prize:        s.prize,
-      // Only the 11 prize-bearing dungeons get a prize badge.
-      // Hyrule Castle and Castle Tower / Agahnim don't drop a prize.
-      showPrize:    id !== 'hc' && id !== 'at',
+      // Only the prize-bearing dungeons get a prize badge.
+      // Hyrule Castle / Castle Tower don't drop a prize; Ganon's Tower
+      // is the endgame marker rather than a tracker prize source.
+      showPrize:    id !== 'hc' && id !== 'at' && id !== 'gt',
       medallion:    s.medallion,
       showMed:      !!d.hasMedallion,
       onBossToggle: () => {
@@ -439,7 +440,9 @@ function renderSMBossGrid() {
       defeated,
       showChests:    false,   // SM bosses don't drop chests
       prize,
-      showPrize:     true,
+      // Mother Brain is the SM endgame boss — no tracker-relevant prize.
+      // The other four (Kraid, Phantoon, Draygon, Ridley) keep their prize.
+      showPrize:     b.id !== 'motherbrain',
       showMed:       false,
       onBossToggle:  () => {
         state.items[b.id] = !defeated;
@@ -666,7 +669,7 @@ const SM_COORDS = {
   "sm-bri-02": { map: "sm", region: "brinstar", x: 12.99, y: 41.08 },
   "sm-bri-03": { map: "sm", region: "brinstar", x: 15.72, y: 41.08 },
   "sm-bri-04": { map: "sm", region: "brinstar", x: 17.09, y: 41.08 },
-  "sm-bri-05": { map: "sm", region: "brinstar", x: 17.09, y: 41.08 },
+  "sm-bri-05": { map: "sm", region: "brinstar", x: 18.59, y: 41.08 },
   "sm-bri-06": { map: "sm", region: "brinstar", x: 21.39, y: 46.10 },
   "sm-bri-07": { map: "sm", region: "brinstar", x: 14.36, y: 46.21 },
   "sm-bri-08": { map: "sm", region: "brinstar", x: 18.55, y: 47.85 },
@@ -681,9 +684,9 @@ const SM_COORDS = {
   "sm-bri-17": { map: "sm", region: "brinstar", x: 28.32, y: 52.75 },
   "sm-bri-18": { map: "sm", region: "brinstar", x: 36.72, y: 52.75 },
   "sm-bri-19": { map: "sm", region: "brinstar", x: 38.09, y: 47.85 },
-  "sm-bri-20": { map: "sm", region: "brinstar", x: 38.09, y: 47.85 },
+  "sm-bri-20": { map: "sm", region: "brinstar", x: 39.59, y: 47.85 },
   "sm-bri-21": { map: "sm", region: "brinstar", x: 42.38, y: 51.11 },
-  "sm-bri-22": { map: "sm", region: "brinstar", x: 42.38, y: 51.11 },
+  "sm-bri-22": { map: "sm", region: "brinstar", x: 43.88, y: 51.11 },
   "sm-bri-23": { map: "sm", region: "brinstar", x: 46.48, y: 47.85 },
   "sm-bri-24": { map: "sm", region: "brinstar", x: 45.21, y: 52.86 },
   "sm-bri-25": { map: "sm", region: "brinstar", x: 46.48, y: 52.86 },
@@ -695,7 +698,7 @@ const SM_COORDS = {
   "sm-bri-31": { map: "sm", region: "brinstar", x: 77.34, y: 66.16 },
   // ---- Crateria (32–44) ----
   "sm-crt-32": { map: "sm", region: "crateria", x: 17.19, y: 9.36 },
-  "sm-crt-33": { map: "sm", region: "crateria", x: 17.19, y: 9.36 },
+  "sm-crt-33": { map: "sm", region: "crateria", x: 18.69, y: 9.36 },
   "sm-crt-34": { map: "sm", region: "crateria", x: 25.59, y: 7.73 },
   "sm-crt-35": { map: "sm", region: "crateria", x: 47.95, y: 6.10 },
   "sm-crt-36": { map: "sm", region: "crateria", x: 52.05, y: 11.00 },
@@ -719,7 +722,7 @@ const SM_COORDS = {
   // ---- Maridia (53–70) ----
   "sm-mar-53": { map: "sm", region: "maridia", x: 75.88, y: 37.82 },
   "sm-mar-54": { map: "sm", region: "maridia", x: 53.52, y: 44.47 },
-  "sm-mar-55": { map: "sm", region: "maridia", x: 53.52, y: 44.47 },
+  "sm-mar-55": { map: "sm", region: "maridia", x: 55.02, y: 44.47 },
   "sm-mar-56": { map: "sm", region: "maridia", x: 64.65, y: 44.35 },
   "sm-mar-57": { map: "sm", region: "maridia", x: 95.51, y: 46.21 },
   "sm-mar-58": { map: "sm", region: "maridia", x: 70.21, y: 49.48 },
@@ -731,7 +734,7 @@ const SM_COORDS = {
   "sm-mar-64": { map: "sm", region: "maridia", x: 61.91, y: 54.49 },
   "sm-mar-65": { map: "sm", region: "maridia", x: 63.28, y: 56.01 },
   "sm-mar-66": { map: "sm", region: "maridia", x: 64.65, y: 57.88 },
-  "sm-mar-67": { map: "sm", region: "maridia", x: 64.65, y: 57.88 },
+  "sm-mar-67": { map: "sm", region: "maridia", x: 66.15, y: 57.88 },
   "sm-mar-68": { map: "sm", region: "maridia", x: 68.95, y: 57.76 },
   "sm-mar-69": { map: "sm", region: "maridia", x: 70.31, y: 59.39 },
   "sm-mar-70": { map: "sm", region: "maridia", x: 82.91, y: 61.14 },
