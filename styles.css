@@ -169,7 +169,7 @@ main {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 2px;
-  max-width: 88px;
+  max-width: 176px;
   margin-left: 0;  /* left-aligned so the grid sits in a tidy block */
 }
 .item-grid.compact {
@@ -188,7 +188,7 @@ main {
 .item {
   position: relative;
   aspect-ratio: 1 / 1;
-  min-height: 16px;
+  min-height: 30px;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -250,13 +250,13 @@ main {
 .item .level {
   position: absolute;
   top: -1px; right: -1px;
-  font-size: 6px;
+  font-size: 8px;
   line-height: 1;
   font-weight: 800;
   color: var(--bg);
   background: var(--accent);
-  padding: 1px 2px;
-  border-radius: 4px;
+  padding: 1px 3px;
+  border-radius: 6px;
   display: none;
   z-index: 1;
   box-shadow: 0 0 0 1px var(--bg);
