@@ -1,10 +1,12 @@
 /* =============================================================
    SMZ3 Tracker — service worker
-   Caches core files on install, serves cache-first with network
-   fallback so the app works fully offline.
+   - Code/markup (HTML/CSS/JS): network-first so updates apply
+     on the next refresh when online.
+   - Everything else (images, manifest, icons): cache-first for
+     speed and offline use.
    ============================================================= */
 
-const CACHE_VERSION = 'smz3-tracker-v12';
+const CACHE_VERSION = 'smz3-tracker-v13';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -18,10 +20,27 @@ const CORE_ASSETS = [
   './icons/icon-maskable-512.png',
 ];
 
-// Image assets are cached on first fetch via the runtime handler below
-// rather than precached, so the SW install step doesn't fail if some
-// filenames are missing or renamed. Once each image loads once online,
-// it's available offline.
+// Files we always want to serve fresh from network when online so
+// that pushing an update reaches the user on the next page refresh
+// rather than waiting for the cache to invalidate. Cache is still
+// used as a fallback when offline.
+const NETWORK_FIRST_PATHS = [
+  '/',
+  '/index.html',
+  '/styles.css',
+  '/logic.js',
+  '/tracker.js',
+  '/sw.js',
+  '/calibrate.html',
+  '/calibrate-sm.html',
+];
+
+function isNetworkFirst(url) {
+  // Match either the absolute pathname or the trailing segment, so
+  // this works whether the app is served from / or /smz3-tracker/.
+  const path = url.pathname;
+  return NETWORK_FIRST_PATHS.some(p => path === p || path.endsWith(p));
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -55,18 +74,35 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
+  if (isNetworkFirst(url)) {
+    // Network-first: always try to grab the latest, fall back to cache offline.
+    event.respondWith(
+      fetch(req).then((resp) => {
+        if (resp && resp.status === 200 && resp.type === 'basic') {
+          const clone = resp.clone();
+          caches.open(CACHE_VERSION).then((c) => c.put(req, clone));
+        }
+        return resp;
+      }).catch(() =>
+        caches.match(req).then((cached) =>
+          cached || (req.mode === 'navigate' ? caches.match('./index.html') : undefined)
+        )
+      )
+    );
+    return;
+  }
+
+  // Cache-first for everything else (images, icons, etc.)
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
       return fetch(req).then((resp) => {
-        // Opportunistically cache successful same-origin responses
         if (resp && resp.status === 200 && resp.type === 'basic') {
           const clone = resp.clone();
           caches.open(CACHE_VERSION).then((c) => c.put(req, clone));
         }
         return resp;
       }).catch(() => {
-        // Offline fallback: serve the cached index for navigation requests
         if (req.mode === 'navigate') {
           return caches.match('./index.html');
         }
