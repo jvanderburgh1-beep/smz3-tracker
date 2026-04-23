@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SMZ3 SM Map Calibrator</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-elev: #141a22;
+    --border: #222c38;
+    --text: #e6edf3;
+    --text-dim: #8b98a5;
+    --accent: #f5a623;
+    --success: #4ade80;
+    --danger: #ef4444;
+    --crateria: #fbbf24;
+    --brinstar: #4ade80;
+    --norfair: #f87171;
+    --wrecked:  #c084fc;
+    --maridia:  #60a5fa;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 14px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+    background: rgba(13,17,23,0.95);
+    backdrop-filter: blur(10px);
+    z-index: 10;
+  }
+  h1 { margin: 0 0 4px; font-size: 16px; letter-spacing: 1px; }
+  .sub { color: var(--text-dim); font-size: 11px; letter-spacing: 0.5px; }
+  .queue {
+    padding: 12px 16px;
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+  }
+  .queue-status { color: var(--text-dim); font-size: 11px; margin-bottom: 6px; }
+  .queue-target {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+  .queue-region {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .queue-region.r-crateria { background: rgba(251,191,36,0.15); color: var(--crateria); }
+  .queue-region.r-brinstar { background: rgba(74,222,128,0.15); color: var(--brinstar); }
+  .queue-region.r-norfair  { background: rgba(248,113,113,0.15); color: var(--norfair); }
+  .queue-region.r-wrecked  { background: rgba(192,132,252,0.15); color: var(--wrecked); }
+  .queue-region.r-maridia  { background: rgba(96,165,250,0.15); color: var(--maridia); }
+
+  .controls {
+    display: flex; gap: 6px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 8px 12px;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .btn:active { border-color: var(--accent); color: var(--accent); }
+  .btn-primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 800; }
+  .btn-danger  { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+  .map-wrap { padding: 8px; }
+  .map-container {
+    position: relative;
+    width: 100%;
+    cursor: crosshair;
+    line-height: 0;
+  }
+  .map-container img {
+    width: 100%;
+    height: auto;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+  .pin {
+    position: absolute;
+    width: 12px; height: 12px;
+    margin-left: -6px; margin-top: -6px;
+    border-radius: 2px;
+    border: 1.5px solid var(--bg);
+    pointer-events: none;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.6);
+  }
+  .pin.r-crateria { background: var(--crateria); }
+  .pin.r-brinstar { background: var(--brinstar); }
+  .pin.r-norfair  { background: var(--norfair); }
+  .pin.r-wrecked  { background: var(--wrecked); }
+  .pin.r-maridia  { background: var(--maridia); }
+  .pin-current {
+    width: 16px; height: 16px;
+    margin-left: -8px; margin-top: -8px;
+    box-shadow: 0 0 0 3px rgba(245,166,35,0.4);
+    animation: pulse 1.2s infinite;
+    z-index: 2;
+  }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+
+  .output {
+    padding: 16px;
+    border-top: 2px solid var(--border);
+  }
+  .output h2 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 240px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px;
+    font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    resize: vertical;
+  }
+  .no-image {
+    padding: 40px 20px; text-align: center; color: var(--text-dim);
+    font-size: 13px; line-height: 1.5;
+  }
+  .hint { color: var(--text-dim); font-size: 11px; margin-top: 8px; line-height: 1.5; }
+  .legend {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    padding: 8px 16px;
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .legend-item { display: inline-flex; align-items: center; gap: 4px; }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>◆ SMZ3 SM Map Calibrator</h1>
+  <div class="sub">Tap each item location on the SM map to record coordinates</div>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-swatch" style="background: var(--crateria)"></span>Crateria</div>
+  <div class="legend-item"><span class="legend-swatch" style="background: var(--brinstar)"></span>Brinstar</div>
+  <div class="legend-item"><span class="legend-swatch" style="background: var(--norfair)"></span>Norfair</div>
+  <div class="legend-item"><span class="legend-swatch" style="background: var(--wrecked)"></span>Wrecked Ship</div>
+  <div class="legend-item"><span class="legend-swatch" style="background: var(--maridia)"></span>Maridia</div>
+</div>
+
+<div class="queue">
+  <div class="queue-status" id="queue-status">Loading…</div>
+  <div class="queue-target" id="queue-target">&nbsp;</div>
+  <div><span class="queue-region" id="queue-region">&nbsp;</span></div>
+  <div class="controls">
+    <button class="btn" id="btn-prev">◀ Prev</button>
+    <button class="btn" id="btn-skip">Skip</button>
+    <button class="btn" id="btn-next">Next ▶</button>
+    <button class="btn btn-danger" id="btn-undo">Undo last</button>
+    <button class="btn btn-primary" id="btn-copy">Copy output</button>
+  </div>
+  <div class="hint">Tap the map to drop a pin at the current target — auto-advances. Pin colors group by region. Pinch to zoom for precision. Progress auto-saves to localStorage.</div>
+</div>
+
+<div class="map-wrap">
+  <div class="map-container" id="map-container"></div>
+</div>
+
+<div class="output">
+  <h2>Generated coordinates</h2>
+  <textarea id="output" readonly></textarea>
+  <p class="hint">After all 100 pins are placed, tap "Copy output" and paste into chat for the next step.</p>
+</div>
+
+<script>
+/* -------------------------------------------------------------
+   Targets — every SM check from the MapleQueen guide,
+   numbered 1–100 (numbering preserves the source).
+   ------------------------------------------------------------- */
+const TARGETS = [
+  // ---- Brinstar (1–28) ----
+  { id: 'sm-bri-01', region: 'brinstar', name: '1. Super Missile (green Brinstar top)' },
+  { id: 'sm-bri-02', region: 'brinstar', name: '2. Missile (green Brinstar below super missile)' },
+  { id: 'sm-bri-03', region: 'brinstar', name: '3. Reserve Tank, Brinstar' },
+  { id: 'sm-bri-04', region: 'brinstar', name: '4. Missile (green Brinstar behind reserve tank)' },
+  { id: 'sm-bri-05', region: 'brinstar', name: '5. Missile (green Brinstar behind missile)' },
+  { id: 'sm-bri-06', region: 'brinstar', name: '6. Missile (pink Brinstar top)' },
+  { id: 'sm-bri-07', region: 'brinstar', name: '7. Power Bomb (green Brinstar bottom)' },
+  { id: 'sm-bri-08', region: 'brinstar', name: '8. Power Bomb (pink Brinstar)' },
+  { id: 'sm-bri-09', region: 'brinstar', name: '9. Energy Tank, Brinstar Gate' },
+  { id: 'sm-bri-10', region: 'brinstar', name: '10. Super Missile (green Brinstar bottom)' },
+  { id: 'sm-bri-11', region: 'brinstar', name: '11. Energy Tank, Etecoons' },
+  { id: 'sm-bri-12', region: 'brinstar', name: '12. Missile (pink Brinstar bottom)' },
+  { id: 'sm-bri-13', region: 'brinstar', name: '13. Charge Beam' },
+  { id: 'sm-bri-14', region: 'brinstar', name: '14. Super Missile (pink Brinstar)' },
+  { id: 'sm-bri-15', region: 'brinstar', name: '15. Power Bomb (blue Brinstar)' },
+  { id: 'sm-bri-16', region: 'brinstar', name: '16. Morphing Ball' },
+  { id: 'sm-bri-17', region: 'brinstar', name: '17. Missile (green Brinstar pipe)' },
+  { id: 'sm-bri-18', region: 'brinstar', name: '18. Missile (blue Brinstar bottom)' },
+  { id: 'sm-bri-19', region: 'brinstar', name: '19. Missile (blue Brinstar behind missile)' },
+  { id: 'sm-bri-20', region: 'brinstar', name: '20. Missile (blue Brinstar top)' },
+  { id: 'sm-bri-21', region: 'brinstar', name: '21. Energy Tank, Brinstar Ceiling' },
+  { id: 'sm-bri-22', region: 'brinstar', name: '22. Missile (blue Brinstar middle)' },
+  { id: 'sm-bri-23', region: 'brinstar', name: '23. Power Bomb (red Brinstar sidehopper room)' },
+  { id: 'sm-bri-24', region: 'brinstar', name: '24. Missile (red Brinstar spike room)' },
+  { id: 'sm-bri-25', region: 'brinstar', name: '25. Power Bomb (red Brinstar spike room)' },
+  { id: 'sm-bri-26', region: 'brinstar', name: '26. Energy Tank, Waterway' },
+  { id: 'sm-bri-27', region: 'brinstar', name: '27. X-Ray Scope' },
+  { id: 'sm-bri-28', region: 'brinstar', name: '28. Spazer' },
+
+  // ---- Lower Brinstar / Kraid (29–31) ----
+  { id: 'sm-bri-29', region: 'brinstar', name: '29. Missile (Kraid)' },
+  { id: 'sm-bri-30', region: 'brinstar', name: '30. Energy Tank, Kraid' },
+  { id: 'sm-bri-31', region: 'brinstar', name: '31. Varia Suit' },
+
+  // ---- Crateria (32–44) ----
+  { id: 'sm-crt-32', region: 'crateria', name: '32. Missile (Crateria gauntlet left)' },
+  { id: 'sm-crt-33', region: 'crateria', name: '33. Missile (Crateria gauntlet right)' },
+  { id: 'sm-crt-34', region: 'crateria', name: '34. Energy Tank, Gauntlet' },
+  { id: 'sm-crt-35', region: 'crateria', name: '35. Power Bomb (Crateria surface)' },
+  { id: 'sm-crt-36', region: 'crateria', name: '36. Missile (Crateria moat)' },
+  { id: 'sm-crt-37', region: 'crateria', name: '37. Missile (outside Wrecked Ship bottom)' },
+  { id: 'sm-crt-38', region: 'crateria', name: '38. Missile (outside Wrecked Ship middle)' },
+  { id: 'sm-crt-39', region: 'crateria', name: '39. Missile (outside Wrecked Ship top)' },
+  { id: 'sm-crt-40', region: 'crateria', name: '40. Energy Tank, Terminator' },
+  { id: 'sm-crt-41', region: 'crateria', name: '41. Missile (Crateria middle)' },
+  { id: 'sm-crt-42', region: 'crateria', name: '42. Bombs' },
+  { id: 'sm-crt-43', region: 'crateria', name: '43. Super Missile (Crateria)' },
+  { id: 'sm-crt-44', region: 'crateria', name: '44. Missile (Crateria bottom)' },
+
+  // ---- Wrecked Ship (45–52) ----
+  { id: 'sm-ws-45',  region: 'wrecked', name: '45. Missile (Wrecked Ship top)' },
+  { id: 'sm-ws-46',  region: 'wrecked', name: '46. Reserve Tank, Wrecked Ship' },
+  { id: 'sm-ws-47',  region: 'wrecked', name: '47. Gravity Suit' },
+  { id: 'sm-ws-48',  region: 'wrecked', name: '48. Missile (Gravity Suit)' },
+  { id: 'sm-ws-49',  region: 'wrecked', name: '49. Energy Tank, Wrecked Ship' },
+  { id: 'sm-ws-50',  region: 'wrecked', name: '50. Missile (Wrecked Ship middle)' },
+  { id: 'sm-ws-51',  region: 'wrecked', name: '51. Super Missile (Wrecked Ship left)' },
+  { id: 'sm-ws-52',  region: 'wrecked', name: '52. Right Super, Wrecked Ship' },
+
+  // ---- Maridia (53–70) ----
+  { id: 'sm-mar-53', region: 'maridia', name: '53. Plasma Beam' },
+  { id: 'sm-mar-54', region: 'maridia', name: '54. Super Missile (yellow Maridia)' },
+  { id: 'sm-mar-55', region: 'maridia', name: '55. Missile (yellow Maridia super missile)' },
+  { id: 'sm-mar-56', region: 'maridia', name: '56. Missile (yellow Maridia false wall)' },
+  { id: 'sm-mar-57', region: 'maridia', name: '57. Missile (Draygon)' },
+  { id: 'sm-mar-58', region: 'maridia', name: '58. Missile (pink Maridia)' },
+  { id: 'sm-mar-59', region: 'maridia', name: '59. Super Missile (pink Maridia)' },
+  { id: 'sm-mar-60', region: 'maridia', name: '60. Energy Tank, Botwoon' },
+  { id: 'sm-mar-61', region: 'maridia', name: '61. Space Jump' },
+  { id: 'sm-mar-62', region: 'maridia', name: '62. Super Missile (green Maridia)' },
+  { id: 'sm-mar-63', region: 'maridia', name: '63. Missile (green Maridia shinespark)' },
+  { id: 'sm-mar-64', region: 'maridia', name: '64. Energy Tank, Mama turtle' },
+  { id: 'sm-mar-65', region: 'maridia', name: '65. Missile (green Maridia tatori)' },
+  { id: 'sm-mar-66', region: 'maridia', name: '66. Missile (left Maridia sand pit room)' },
+  { id: 'sm-mar-67', region: 'maridia', name: '67. Reserve Tank, Maridia' },
+  { id: 'sm-mar-68', region: 'maridia', name: '68. Missile (right Maridia sand pit room)' },
+  { id: 'sm-mar-69', region: 'maridia', name: '69. Power Bomb (right Maridia sand pit room)' },
+  { id: 'sm-mar-70', region: 'maridia', name: '70. Spring Ball' },
+
+  // ---- Norfair / Lower Norfair (71–100) ----
+  { id: 'sm-nor-71', region: 'norfair', name: '71. Ice Beam' },
+  { id: 'sm-nor-72', region: 'norfair', name: '72. Reserve Tank, Norfair' },
+  { id: 'sm-nor-73', region: 'norfair', name: '73. Missile (Norfair Reserve Tank)' },
+  { id: 'sm-nor-74', region: 'norfair', name: '74. Missile (bubble Norfair green door)' },
+  { id: 'sm-nor-75', region: 'norfair', name: '75. Missile (Speed Booster)' },
+  { id: 'sm-nor-76', region: 'norfair', name: '76. Speed Booster' },
+  { id: 'sm-nor-77', region: 'norfair', name: '77. Missile (below Ice Beam)' },
+  { id: 'sm-nor-78', region: 'norfair', name: '78. Hi-Jump Boots' },
+  { id: 'sm-nor-79', region: 'norfair', name: '79. Missile (Hi-Jump Boots)' },
+  { id: 'sm-nor-80', region: 'norfair', name: '80. Energy Tank (Hi-Jump Boots)' },
+  { id: 'sm-nor-81', region: 'norfair', name: '81. Missile (above Crocomire)' },
+  { id: 'sm-nor-82', region: 'norfair', name: '82. Missile (lava room)' },
+  { id: 'sm-nor-83', region: 'norfair', name: '83. Missile (bubble Norfair)' },
+  { id: 'sm-nor-84', region: 'norfair', name: '84. Missile (Wave Beam)' },
+  { id: 'sm-nor-85', region: 'norfair', name: '85. Wave Beam' },
+  { id: 'sm-nor-86', region: 'norfair', name: '86. Missile (lower Norfair near Wave Beam)' },
+  { id: 'sm-nor-87', region: 'norfair', name: '87. Missile (lower Norfair above fire flea room)' },
+  { id: 'sm-nor-88', region: 'norfair', name: '88. Power Bomb (lower Norfair above fire flea room)' },
+  { id: 'sm-nor-89', region: 'norfair', name: '89. Power Bomb (Crocomire)' },
+  { id: 'sm-nor-90', region: 'norfair', name: '90. Energy Tank, Crocomire' },
+  { id: 'sm-nor-91', region: 'norfair', name: '91. Missile (Mickey Mouse room)' },
+  { id: 'sm-nor-92', region: 'norfair', name: '92. Energy Tank, Firefleas' },
+  { id: 'sm-nor-93', region: 'norfair', name: '93. Grapple Beam' },
+  { id: 'sm-nor-94', region: 'norfair', name: '94. Missile (Grapple Beam)' },
+  { id: 'sm-nor-95', region: 'norfair', name: '95. Missile (below Crocomire)' },
+  { id: 'sm-nor-96', region: 'norfair', name: '96. Missile (Gold Torizo)' },
+  { id: 'sm-nor-97', region: 'norfair', name: '97. Super Missile (Gold Torizo)' },
+  { id: 'sm-nor-98', region: 'norfair', name: '98. Screw Attack' },
+  { id: 'sm-nor-99', region: 'norfair', name: '99. Energy Tank, Ridley' },
+  { id: 'sm-nor-100', region: 'norfair', name: '100. Power Bomb (Power Bombs of shame)' },
+];
+
+/* ---- State ---- */
+const coords = {};
+let currentIdx = 0;
+let containerEl;
+
+const STORAGE = 'smz3-sm-calibrator-v1';
+try {
+  const saved = localStorage.getItem(STORAGE);
+  if (saved) {
+    const p = JSON.parse(saved);
+    Object.assign(coords, p.coords || {});
+    if (typeof p.idx === 'number') currentIdx = Math.max(0, Math.min(p.idx, TARGETS.length));
+  }
+} catch (e) {}
+
+// On load, jump to first unplaced target so re-opening the calibrator
+// after adding new locations doesn't make you sit on completed pins.
+const firstMissing = TARGETS.findIndex(t => !coords[t.id]);
+currentIdx = firstMissing === -1 ? TARGETS.length : firstMissing;
+
+function save() {
+  try { localStorage.setItem(STORAGE, JSON.stringify({ coords, idx: currentIdx })); } catch (e) {}
+}
+
+function setupMap() {
+  containerEl = document.getElementById('map-container');
+  const img = new Image();
+  img.src = 'images/maps/SM_map_full.png';
+  img.alt = 'SM Map';
+  img.onerror = () => {
+    containerEl.innerHTML = `<div class="no-image">Couldn't load <code>images/maps/SM_map_full.png</code>.<br>Make sure the file exists and this page is served from the tracker folder (not opened directly from the filesystem).</div>`;
+  };
+  img.onload = () => {
+    containerEl.appendChild(img);
+    renderPins();
+    containerEl.addEventListener('click', onMapTap);
+  };
+}
+
+function onMapTap(ev) {
+  if (currentIdx >= TARGETS.length) return;
+  const img = containerEl.querySelector('img');
+  if (!img) return;
+  const rect = img.getBoundingClientRect();
+  const x = ((ev.clientX - rect.left) / rect.width) * 100;
+  const y = ((ev.clientY - rect.top) / rect.height) * 100;
+  const t = TARGETS[currentIdx];
+  coords[t.id] = { x: +x.toFixed(2), y: +y.toFixed(2) };
+  advance();
+  save();
+  renderPins();
+  updateUI();
+}
+
+function renderPins() {
+  if (!containerEl) return;
+  containerEl.querySelectorAll('.pin').forEach(n => n.remove());
+  TARGETS.forEach((t, i) => {
+    const c = coords[t.id];
+    if (!c) return;
+    const pin = document.createElement('div');
+    let cls = 'pin r-' + t.region;
+    if (i === currentIdx) cls += ' pin-current';
+    pin.className = cls;
+    pin.style.left = c.x + '%';
+    pin.style.top  = c.y + '%';
+    pin.title = t.name;
+    containerEl.appendChild(pin);
+  });
+}
+
+function advance() {
+  if (currentIdx < TARGETS.length - 1) currentIdx++;
+  else currentIdx = TARGETS.length;
+}
+
+function updateUI() {
+  const done = Object.keys(coords).length;
+  const total = TARGETS.length;
+  document.getElementById('queue-status').textContent =
+    `${done}/${total} placed · ${total - done} remaining`;
+
+  if (currentIdx >= TARGETS.length) {
+    document.getElementById('queue-target').textContent = '✓ All targets placed';
+    document.getElementById('queue-region').textContent = 'copy output below';
+    document.getElementById('queue-region').className = 'queue-region';
+  } else {
+    const t = TARGETS[currentIdx];
+    document.getElementById('queue-target').textContent = t.name;
+    const r = document.getElementById('queue-region');
+    r.textContent = t.region;
+    r.className = 'queue-region r-' + t.region;
+  }
+  updateOutput();
+}
+
+function updateOutput() {
+  const lines = ['// ---- SM map coordinates (generated by calibrator) ----'];
+  lines.push('const SM_COORDS = {');
+  TARGETS.forEach(t => {
+    const c = coords[t.id];
+    if (!c) return;
+    lines.push(`  "${t.id}": { region: "${t.region}", x: ${c.x}, y: ${c.y} },  // ${t.name}`);
+  });
+  lines.push('};');
+  document.getElementById('output').value = lines.join('\n');
+}
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (currentIdx > 0) currentIdx--;
+  save(); renderPins(); updateUI();
+});
+document.getElementById('btn-skip').addEventListener('click', () => {
+  advance(); save(); renderPins(); updateUI();
+});
+document.getElementById('btn-next').addEventListener('click', () => {
+  advance(); save(); renderPins(); updateUI();
+});
+document.getElementById('btn-undo').addEventListener('click', () => {
+  if (currentIdx === 0) return;
+  const prev = TARGETS[currentIdx - 1];
+  delete coords[prev.id];
+  currentIdx--;
+  save(); renderPins(); updateUI();
+});
+document.getElementById('btn-copy').addEventListener('click', async () => {
+  const ta = document.getElementById('output');
+  try {
+    await navigator.clipboard.writeText(ta.value);
+    const b = document.getElementById('btn-copy');
+    const orig = b.textContent;
+    b.textContent = '✓ Copied';
+    setTimeout(() => { b.textContent = orig; }, 1200);
+  } catch (e) { ta.select(); }
+});
+
+setupMap();
+updateUI();
+</script>
+
+</body>
+</html>
