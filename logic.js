@@ -101,8 +101,19 @@ function canReachDarkWorldEast(items) {
 }
 
 function canReachDarkWorldNorthWest(items) {
-  // Village of Outcasts
-  return canEnterDarkWorld(items) && titan(items);
+  // Village of Outcasts. Three independent routes:
+  //   1) DW East access + Hookshot + (Hammer OR any glove) + Moon Pearl
+  //      — cross from East over the hookshot pegs/bridge into the village
+  //   2) Moon Pearl + any glove + Hammer
+  //      — south-then-up loop using hammer pegs to reach the village
+  //   3) Moon Pearl + Titan glove
+  //      — direct lift entry from the LW (kakariko-equivalent area)
+  if (!has(items, 'moonpearl')) return false;
+  if (titan(items)) return true;
+  if (anyGlove(items) && has(items, 'hammer')) return true;
+  if (canReachDarkWorldEast(items) && has(items, 'hookshot') &&
+      (has(items, 'hammer') || anyGlove(items))) return true;
+  return false;
 }
 
 function canReachDeathMountainWest(items) {
@@ -130,6 +141,132 @@ function canReachDarkDeathMountainWest(items) {
 
 function canReachMireArea(items) {
   return canEnterDarkWorld(items) && has(items, 'flute') && titan(items);
+}
+
+/* -------------------------------------------------------------
+   Super Metroid access predicates
+   Ported approximately from tewtal/SMZ3Randomizer source.
+   These represent the most common no-glitches paths — not every
+   tournament-level trick is included, so a marker may show
+   UNAVAIL when an expert player could in fact reach it.
+   ------------------------------------------------------------- */
+
+// Item shorthand — Super Metroid items use these IDs in state.items:
+//   morph, bombs_sm, super, pb, charge, ice, wave, spazer, plasma,
+//   varia, gravity, hijump, speed, space, spring, screw, grapple,
+//   xray, missile
+
+function smHasMorph(i)    { return has(i, 'morph'); }
+function smHasBombs(i)    { return has(i, 'bombs_sm'); }
+function smHasSuper(i)    { return has(i, 'super'); }
+function smHasPB(i)       { return has(i, 'pb'); }
+function smHasMissile(i)  { return has(i, 'missile'); }
+function smHasVaria(i)    { return has(i, 'varia'); }
+function smHasGravity(i)  { return has(i, 'gravity'); }
+function smHasHiJump(i)   { return has(i, 'hijump'); }
+function smHasSpeed(i)    { return has(i, 'speed'); }
+function smHasSpace(i)    { return has(i, 'space'); }
+function smHasSpring(i)   { return has(i, 'spring'); }
+function smHasScrew(i)    { return has(i, 'screw'); }
+function smHasGrapple(i)  { return has(i, 'grapple'); }
+function smHasIce(i)      { return has(i, 'ice'); }
+function smHasWave(i)     { return has(i, 'wave'); }
+function smHasPlasma(i)   { return has(i, 'plasma'); }
+function smHasCharge(i)   { return has(i, 'charge'); }
+
+// Open a power-bomb passage (red door / pb block)
+function canUsePowerBombs(i) { return smHasMorph(i) && smHasPB(i); }
+
+// Get through a bomb-block — bombs OR power bombs
+function canPassBombPassages(i) {
+  return smHasMorph(i) && (smHasBombs(i) || smHasPB(i));
+}
+
+// Destroy bomb walls (slightly thicker than passages — needs power bombs OR screw OR speed)
+function canDestroyBombWalls(i) {
+  return (smHasMorph(i) && (smHasBombs(i) || smHasPB(i))) || smHasScrew(i);
+}
+
+// Open green-door rooms (need supers)
+function canOpenGreenDoors(i) { return smHasSuper(i); }
+
+// Open red-door rooms (need missiles or supers)
+function canOpenRedDoors(i)   { return smHasMissile(i) || smHasSuper(i); }
+
+// Get up tall jumps without a Space Jump
+function canFly(i) { return smHasSpace(i) || (smHasMorph(i) && smHasBombs(i)); }
+
+// Heat protection
+function hasHeatShield(i) { return smHasVaria(i) || smHasGravity(i); }
+
+// Hellrun — no Varia in Norfair, requires energy + speed
+function canHellRun(i)    { return smHasVaria(i); }
+
+// ----- Region access -----
+
+// Reach Crateria upper / east areas. From start you have ship landing.
+function canEnterAndLeaveGauntlet(i) {
+  // Need to clear Gauntlet — speed booster shinespark, OR power bombs to clear
+  return canDestroyBombWalls(i) || (smHasSpeed(i) && smHasMorph(i));
+}
+
+// Old Mother Brain / Tourian elevator — basic Crateria movement
+function canAccessRedBrinstar(i) {
+  return canOpenGreenDoors(i) && (canDestroyBombWalls(i) || smHasHiJump(i));
+}
+
+function canAccessKraid(i) {
+  return canAccessRedBrinstar(i) && canPassBombPassages(i);
+}
+
+function canAccessHeatedNorfairUpper(i) {
+  // Need to enter Upper Norfair from Brinstar elevator and survive heat.
+  // SMZ3 standard: needs hellrun-friendly kit OR varia
+  return canAccessRedBrinstar(i) && hasHeatShield(i);
+}
+
+function canAccessNorfairUpper(i) {
+  // Norfair entry — to even reach the elevator from red Brinstar
+  return canAccessRedBrinstar(i);
+}
+
+function canAccessLowerNorfair(i) {
+  // Need varia (heat), super (bridge door), and either space jump OR
+  // gravity+hijump combo to traverse lower norfair lava rooms.
+  return canAccessNorfairUpper(i) &&
+         smHasVaria(i) && canUsePowerBombs(i) &&
+         (smHasSpace(i) || (smHasGravity(i) && smHasHiJump(i)));
+}
+
+function canAccessWreckedShip(i) {
+  // Phantoon's Ship — need supers + (power bombs OR speed) to bypass.
+  // Beating Phantoon needs supers; entering needs supers + PBs.
+  return canUsePowerBombs(i) && canOpenGreenDoors(i);
+}
+
+function canDefeatPhantoon(i) {
+  // Phantoon dies to charge OR enough ammo. Simplified: charge OR plenty of supers.
+  // We'll require supers (the door key) and accept either charge or just supers.
+  return canAccessWreckedShip(i);
+}
+
+function canAccessOuterMaridia(i) {
+  // Reach Maridia — supers + (gravity OR (hijump+ice)) for getting through quicksand
+  return canAccessRedBrinstar(i) && canUsePowerBombs(i) &&
+         (smHasGravity(i) || (smHasHiJump(i) && smHasIce(i)));
+}
+
+function canAccessInnerMaridia(i) {
+  // Past Botwoon's quicksand — really wants gravity
+  return canAccessOuterMaridia(i) && smHasGravity(i);
+}
+
+function canDefeatDraygon(i) {
+  return canAccessInnerMaridia(i) && (smHasSpeed(i) || smHasGrapple(i));
+}
+
+function canDefeatBotwoon(i) {
+  return canAccessOuterMaridia(i) && (smHasIce(i) || smHasSpeed(i));
 }
 
 /* -------------------------------------------------------------
@@ -491,13 +628,18 @@ const LOCATIONS = [
   { id: 'lw-lostwoods-hideout', region: 'Light World', name: 'Lost Woods Hideout',
     check: () => STATE.AVAILABLE },
   { id: 'lw-lumberjacks', region: 'Light World', name: 'Lumberjacks Tree',
-    check: (i, st) => (st.dungeons.at?.boss && has(i, 'boots')) ? STATE.AVAILABLE : STATE.UNAVAIL },
+    check: (i, st) => (st.dungeons.at?.boss && has(i, 'boots'))
+                      ? STATE.AVAILABLE
+                      : STATE.VISIBLE },
   { id: 'lw-king-tomb', region: 'Light World', name: "King's Tomb",
     check: (i) => {
+      // Boots required to dash into the tomb. Reachable two ways:
+      //   - Titan glove (lift the gravestones from the LW side), OR
+      //   - Mirror back from the Dark World pyramid area.
       if (!has(i, 'boots')) return STATE.UNAVAIL;
       if (titan(i)) return STATE.AVAILABLE;
       if (has(i, 'mirror') && canEnterDarkWorld(i)) return STATE.AVAILABLE;
-      return STATE.VISIBLE;
+      return STATE.UNAVAIL;
     } },
   { id: 'lw-kakariko-well', region: 'Light World', name: 'Kakariko Well',
     check: () => STATE.AVAILABLE },
@@ -602,15 +744,12 @@ const LOCATIONS = [
   { id: 'lw-links-house', region: 'Light World', name: "Link's House",
     check: () => STATE.AVAILABLE },
   { id: 'lw-graveyard-ledge', region: 'Light World', name: 'Graveyard Ledge',
-    // Need boots to dash into the grave, then accessed from DW via mirror
-    // OR glitch-less vanilla path (skipped for now). Treat same shape as King's Tomb.
-    check: (i) => {
-      if (!has(i, 'boots')) return STATE.UNAVAIL;
-      if (has(i, 'mirror') && canEnterDarkWorld(i)) return STATE.AVAILABLE;
-      return STATE.VISIBLE;
-    } },
+    // Reach the ledge above the graveyard by mirroring from the
+    // corresponding DW spot. Boots not required (it's the King's Tomb
+    // chest that needs boots, not this one).
+    check: (i) => (has(i, 'mirror') && canEnterDarkWorld(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
   { id: 'lw-pegasus-rocks', region: 'Light World', name: 'Pegasus Rocks',
-    check: (i) => has(i, 'boots') ? STATE.AVAILABLE : STATE.VISIBLE },
+    check: (i) => has(i, 'boots') ? STATE.AVAILABLE : STATE.UNAVAIL },
   { id: 'lw-king-zora', region: 'Light World', name: 'King Zora',
     // Pay 500 rupees — reachable with any glove (to climb around the cliff)
     check: (i) => anyGlove(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
@@ -682,33 +821,224 @@ const LOCATIONS = [
       return (has(i, 'byrna') || has(i, 'cape')) ? STATE.AVAILABLE : STATE.PARTIAL;
     } },
 
-  /* ---- Super Metroid (major items / zones) ---- */
-  { id: 'sm-crateria-wake', region: 'Super Metroid', name: 'Crateria — Wake Up Items',
-    check: (i) => has(i, 'morph') ? STATE.AVAILABLE : STATE.UNAVAIL },
-  { id: 'sm-brin-morph', region: 'Super Metroid', name: 'Brinstar — Morph Ball Area',
-    check: (i) => has(i, 'morph') ? STATE.AVAILABLE : STATE.UNAVAIL },
-  { id: 'sm-brin-pinkpb', region: 'Super Metroid', name: 'Pink Brinstar — Super/Hidden PB',
-    check: (i) => (has(i, 'morph') && has(i, 'super')) ? STATE.AVAILABLE : STATE.UNAVAIL },
-  { id: 'sm-brin-redtower', region: 'Super Metroid', name: 'Red Brinstar — Red Tower',
-    check: (i) => (has(i, 'morph') && (has(i, 'super') || has(i, 'pb'))) ? STATE.AVAILABLE : STATE.UNAVAIL },
-  { id: 'sm-kraid', region: 'Super Metroid', name: 'Kraid (boss)',
-    check: (i) => (has(i, 'morph') && has(i, 'super')) ? STATE.AVAILABLE : STATE.UNAVAIL },
-  { id: 'sm-norfair-upper', region: 'Super Metroid', name: 'Upper Norfair — items',
-    check: (i) => (has(i, 'morph') && has(i, 'super') && (has(i, 'hijump') || has(i, 'ice') || has(i, 'space'))) ? STATE.AVAILABLE : STATE.UNAVAIL },
-  { id: 'sm-norfair-lower', region: 'Super Metroid', name: 'Lower Norfair — items',
-    check: (i) => (has(i, 'morph') && has(i, 'super') && has(i, 'varia') && has(i, 'pb') && (has(i, 'space') || (has(i, 'hijump') && has(i, 'gravity')))) ? STATE.AVAILABLE : STATE.UNAVAIL },
-  { id: 'sm-ridley', region: 'Super Metroid', name: 'Ridley (boss)',
-    check: (i) => (has(i, 'morph') && has(i, 'super') && has(i, 'varia') && has(i, 'pb')) ? STATE.AVAILABLE : STATE.UNAVAIL },
-  { id: 'sm-wrecked', region: 'Super Metroid', name: 'Wrecked Ship — items',
-    check: (i) => (has(i, 'morph') && has(i, 'super') && has(i, 'pb')) ? STATE.AVAILABLE : STATE.UNAVAIL },
-  { id: 'sm-phantoon', region: 'Super Metroid', name: 'Phantoon (boss)',
-    check: (i) => (has(i, 'morph') && has(i, 'super') && has(i, 'pb')) ? STATE.AVAILABLE : STATE.UNAVAIL },
-  { id: 'sm-maridia-outer', region: 'Super Metroid', name: 'Maridia — Outer',
-    check: (i) => (has(i, 'morph') && has(i, 'super') && has(i, 'pb') && (has(i, 'gravity') || (has(i, 'hijump') && has(i, 'ice')))) ? STATE.AVAILABLE : STATE.UNAVAIL },
-  { id: 'sm-maridia-inner', region: 'Super Metroid', name: 'Maridia — Inner',
-    check: (i) => (has(i, 'morph') && has(i, 'super') && has(i, 'pb') && has(i, 'gravity')) ? STATE.AVAILABLE : STATE.UNAVAIL },
-  { id: 'sm-draygon', region: 'Super Metroid', name: 'Draygon (boss)',
-    check: (i) => (has(i, 'morph') && has(i, 'super') && has(i, 'pb') && has(i, 'gravity')) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  /* ====================================================
+     Super Metroid — 100 individual checks
+     IDs match the calibrator (sm-bri-NN, sm-crt-NN, etc.)
+     Region tagged 'Super Metroid' so the map renderer
+     knows to draw markers on the SM map.
+     ====================================================*/
+
+  // ---- Brinstar (1–28) ----
+  { id: 'sm-bri-01', region: 'Super Metroid', name: 'Super Missile (green Brinstar top)',
+    check: (i) => (canDestroyBombWalls(i) && smHasMorph(i) && canOpenGreenDoors(i) && smHasSpeed(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-02', region: 'Super Metroid', name: 'Missile (green Brinstar below super missile)',
+    check: (i) => (canPassBombPassages(i) && canOpenRedDoors(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-03', region: 'Super Metroid', name: 'Reserve Tank, Brinstar',
+    check: (i) => (canDestroyBombWalls(i) && smHasMorph(i) && smHasSpeed(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-04', region: 'Super Metroid', name: 'Missile (green Brinstar behind reserve tank)',
+    check: (i) => (canDestroyBombWalls(i) && smHasMorph(i) && smHasSpeed(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-05', region: 'Super Metroid', name: 'Missile (green Brinstar behind missile)',
+    check: (i) => (canDestroyBombWalls(i) && smHasMorph(i) && smHasSpeed(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-06', region: 'Super Metroid', name: 'Missile (pink Brinstar top)',
+    check: (i) => (canPassBombPassages(i) && canOpenGreenDoors(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-07', region: 'Super Metroid', name: 'Power Bomb (green Brinstar bottom)',
+    check: (i) => canUsePowerBombs(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-08', region: 'Super Metroid', name: 'Power Bomb (pink Brinstar)',
+    check: (i) => (canUsePowerBombs(i) && canOpenGreenDoors(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-09', region: 'Super Metroid', name: 'Energy Tank, Brinstar Gate',
+    check: (i) => (canPassBombPassages(i) && canOpenGreenDoors(i) && (smHasWave(i) || smHasSuper(i) || smHasCharge(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-10', region: 'Super Metroid', name: 'Super Missile (green Brinstar bottom)',
+    check: (i) => (canPassBombPassages(i) && canOpenGreenDoors(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-11', region: 'Super Metroid', name: 'Energy Tank, Etecoons',
+    check: (i) => (canUsePowerBombs(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-12', region: 'Super Metroid', name: 'Missile (pink Brinstar bottom)',
+    check: (i) => (canPassBombPassages(i) && canOpenGreenDoors(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-13', region: 'Super Metroid', name: 'Charge Beam',
+    check: (i) => (canPassBombPassages(i) && canOpenGreenDoors(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-14', region: 'Super Metroid', name: 'Super Missile (pink Brinstar)',
+    check: (i) => (canPassBombPassages(i) && canOpenGreenDoors(i) && (smHasGrapple(i) || smHasSpace(i) || smHasSpeed(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-15', region: 'Super Metroid', name: 'Power Bomb (blue Brinstar)',
+    check: (i) => canUsePowerBombs(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-16', region: 'Super Metroid', name: 'Morphing Ball',
+    check: (i) => STATE.AVAILABLE },
+  { id: 'sm-bri-17', region: 'Super Metroid', name: 'Missile (green Brinstar pipe)',
+    check: (i) => smHasMorph(i) ? STATE.AVAILABLE : STATE.VISIBLE },
+  { id: 'sm-bri-18', region: 'Super Metroid', name: 'Missile (blue Brinstar bottom)',
+    check: (i) => smHasMorph(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-19', region: 'Super Metroid', name: 'Missile (blue Brinstar behind missile)',
+    check: (i) => (canPassBombPassages(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-20', region: 'Super Metroid', name: 'Missile (blue Brinstar top)',
+    check: (i) => (canPassBombPassages(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-21', region: 'Super Metroid', name: 'Energy Tank, Brinstar Ceiling',
+    check: (i) => (canFly(i) || smHasHiJump(i) || smHasSpeed(i) || smHasIce(i)) ? STATE.AVAILABLE : STATE.VISIBLE },
+  { id: 'sm-bri-22', region: 'Super Metroid', name: 'Missile (blue Brinstar middle)',
+    check: (i) => (smHasMorph(i) && canOpenRedDoors(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-23', region: 'Super Metroid', name: 'Power Bomb (red Brinstar sidehopper room)',
+    check: (i) => (canAccessRedBrinstar(i) && canUsePowerBombs(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-24', region: 'Super Metroid', name: 'Missile (red Brinstar spike room)',
+    check: (i) => (canAccessRedBrinstar(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-25', region: 'Super Metroid', name: 'Power Bomb (red Brinstar spike room)',
+    check: (i) => (canAccessRedBrinstar(i) && canUsePowerBombs(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-26', region: 'Super Metroid', name: 'Energy Tank, Waterway',
+    check: (i) => (canUsePowerBombs(i) && canOpenRedDoors(i) && smHasSpeed(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-27', region: 'Super Metroid', name: 'X-Ray Scope',
+    check: (i) => (canAccessRedBrinstar(i) && canUsePowerBombs(i) && (smHasGrapple(i) || smHasSpace(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-28', region: 'Super Metroid', name: 'Spazer',
+    check: (i) => (canPassBombPassages(i) && canOpenGreenDoors(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+
+  // ---- Lower Brinstar / Kraid (29–31) ----
+  { id: 'sm-bri-29', region: 'Super Metroid', name: 'Missile (Kraid)',
+    check: (i) => (canAccessKraid(i) && canUsePowerBombs(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-30', region: 'Super Metroid', name: 'Energy Tank, Kraid',
+    check: (i) => canAccessKraid(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-bri-31', region: 'Super Metroid', name: 'Varia Suit',
+    check: (i) => canAccessKraid(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+
+  // ---- Crateria (32–44) ----
+  { id: 'sm-crt-32', region: 'Super Metroid', name: 'Missile (Crateria gauntlet left)',
+    check: (i) => (canEnterAndLeaveGauntlet(i) && (smHasSpeed(i) || canFly(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-crt-33', region: 'Super Metroid', name: 'Missile (Crateria gauntlet right)',
+    check: (i) => (canEnterAndLeaveGauntlet(i) && (smHasSpeed(i) || canFly(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-crt-34', region: 'Super Metroid', name: 'Energy Tank, Gauntlet',
+    check: (i) => canEnterAndLeaveGauntlet(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-crt-35', region: 'Super Metroid', name: 'Power Bomb (Crateria surface)',
+    check: (i) => (canUsePowerBombs(i) && (smHasSpeed(i) || canFly(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-crt-36', region: 'Super Metroid', name: 'Missile (Crateria moat)',
+    check: (i) => canUsePowerBombs(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-crt-37', region: 'Super Metroid', name: 'Missile (outside Wrecked Ship bottom)',
+    check: (i) => (canUsePowerBombs(i) && canDefeatPhantoon(i)) ? STATE.AVAILABLE : STATE.VISIBLE },
+  { id: 'sm-crt-38', region: 'Super Metroid', name: 'Missile (outside Wrecked Ship middle)',
+    check: (i) => (canUsePowerBombs(i) && canDefeatPhantoon(i) && smHasGravity(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-crt-39', region: 'Super Metroid', name: 'Missile (outside Wrecked Ship top)',
+    check: (i) => (canUsePowerBombs(i) && canDefeatPhantoon(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-crt-40', region: 'Super Metroid', name: 'Energy Tank, Terminator',
+    check: (i) => canDestroyBombWalls(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-crt-41', region: 'Super Metroid', name: 'Missile (Crateria middle)',
+    check: (i) => canPassBombPassages(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-crt-42', region: 'Super Metroid', name: 'Bombs',
+    check: (i) => (canOpenRedDoors(i) && smHasMorph(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-crt-43', region: 'Super Metroid', name: 'Super Missile (Crateria)',
+    check: (i) => (canUsePowerBombs(i) && smHasSpeed(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-crt-44', region: 'Super Metroid', name: 'Missile (Crateria bottom)',
+    check: (i) => canDestroyBombWalls(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+
+  // ---- Wrecked Ship (45–52) ----
+  { id: 'sm-ws-45',  region: 'Super Metroid', name: 'Missile (Wrecked Ship top)',
+    check: (i) => canAccessWreckedShip(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-ws-46',  region: 'Super Metroid', name: 'Reserve Tank, Wrecked Ship',
+    check: (i) => (canDefeatPhantoon(i) && smHasSpeed(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-ws-47',  region: 'Super Metroid', name: 'Gravity Suit',
+    check: (i) => canDefeatPhantoon(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-ws-48',  region: 'Super Metroid', name: 'Missile (Gravity Suit)',
+    check: (i) => canDefeatPhantoon(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-ws-49',  region: 'Super Metroid', name: 'Energy Tank, Wrecked Ship',
+    check: (i) => (canDefeatPhantoon(i) && smHasSpeed(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-ws-50',  region: 'Super Metroid', name: 'Missile (Wrecked Ship middle)',
+    check: (i) => canAccessWreckedShip(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-ws-51',  region: 'Super Metroid', name: 'Super Missile (Wrecked Ship left)',
+    check: (i) => canDefeatPhantoon(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-ws-52',  region: 'Super Metroid', name: 'Right Super, Wrecked Ship',
+    check: (i) => canDefeatPhantoon(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+
+  // ---- Maridia (53–70) ----
+  { id: 'sm-mar-53', region: 'Super Metroid', name: 'Plasma Beam',
+    check: (i) => (canDefeatDraygon(i) && (smHasPlasma(i) || smHasScrew(i) || smHasSpeed(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-54', region: 'Super Metroid', name: 'Super Missile (yellow Maridia)',
+    check: (i) => (canAccessOuterMaridia(i) && canUsePowerBombs(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-55', region: 'Super Metroid', name: 'Missile (yellow Maridia super missile)',
+    check: (i) => (canAccessOuterMaridia(i) && canUsePowerBombs(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-56', region: 'Super Metroid', name: 'Missile (yellow Maridia false wall)',
+    check: (i) => canAccessOuterMaridia(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-57', region: 'Super Metroid', name: 'Missile (Draygon)',
+    check: (i) => canDefeatDraygon(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-58', region: 'Super Metroid', name: 'Missile (pink Maridia)',
+    check: (i) => (canAccessOuterMaridia(i) && smHasSpeed(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-59', region: 'Super Metroid', name: 'Super Missile (pink Maridia)',
+    check: (i) => (canAccessOuterMaridia(i) && smHasSpeed(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-60', region: 'Super Metroid', name: 'Energy Tank, Botwoon',
+    check: (i) => canDefeatBotwoon(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-61', region: 'Super Metroid', name: 'Space Jump',
+    check: (i) => canDefeatDraygon(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-62', region: 'Super Metroid', name: 'Super Missile (green Maridia)',
+    check: (i) => (canAccessOuterMaridia(i) && smHasSpeed(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-63', region: 'Super Metroid', name: 'Missile (green Maridia shinespark)',
+    check: (i) => (canAccessOuterMaridia(i) && smHasSpeed(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-64', region: 'Super Metroid', name: 'Energy Tank, Mama turtle',
+    check: (i) => (canAccessOuterMaridia(i) && (smHasSpeed(i) || canFly(i) || smHasGrapple(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-65', region: 'Super Metroid', name: 'Missile (green Maridia tatori)',
+    check: (i) => canAccessOuterMaridia(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-66', region: 'Super Metroid', name: 'Missile (left Maridia sand pit room)',
+    check: (i) => canAccessInnerMaridia(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-67', region: 'Super Metroid', name: 'Reserve Tank, Maridia',
+    check: (i) => canAccessInnerMaridia(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-68', region: 'Super Metroid', name: 'Missile (right Maridia sand pit room)',
+    check: (i) => canAccessInnerMaridia(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-69', region: 'Super Metroid', name: 'Power Bomb (right Maridia sand pit room)',
+    check: (i) => (canAccessInnerMaridia(i) && canUsePowerBombs(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-mar-70', region: 'Super Metroid', name: 'Spring Ball',
+    check: (i) => (canAccessInnerMaridia(i) && canUsePowerBombs(i) && (smHasGrapple(i) || smHasSpace(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+
+  // ---- Norfair / Lower Norfair (71–100) ----
+  { id: 'sm-nor-71', region: 'Super Metroid', name: 'Ice Beam',
+    check: (i) => (canAccessHeatedNorfairUpper(i) && canPassBombPassages(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-72', region: 'Super Metroid', name: 'Reserve Tank, Norfair',
+    check: (i) => (canAccessHeatedNorfairUpper(i) && (canFly(i) || smHasGrapple(i) || smHasHiJump(i) || smHasIce(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-73', region: 'Super Metroid', name: 'Missile (Norfair Reserve Tank)',
+    check: (i) => (canAccessHeatedNorfairUpper(i) && (canFly(i) || smHasGrapple(i) || smHasHiJump(i) || smHasIce(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-74', region: 'Super Metroid', name: 'Missile (bubble Norfair green door)',
+    check: (i) => canAccessHeatedNorfairUpper(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-75', region: 'Super Metroid', name: 'Missile (Speed Booster)',
+    check: (i) => canAccessHeatedNorfairUpper(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-76', region: 'Super Metroid', name: 'Speed Booster',
+    check: (i) => canAccessHeatedNorfairUpper(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-77', region: 'Super Metroid', name: 'Missile (below Ice Beam)',
+    check: (i) => (canAccessHeatedNorfairUpper(i) && canUsePowerBombs(i) && smHasSpeed(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-78', region: 'Super Metroid', name: 'Hi-Jump Boots',
+    check: (i) => canAccessHeatedNorfairUpper(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-79', region: 'Super Metroid', name: 'Missile (Hi-Jump Boots)',
+    check: (i) => canAccessHeatedNorfairUpper(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-80', region: 'Super Metroid', name: 'Energy Tank (Hi-Jump Boots)',
+    check: (i) => canAccessHeatedNorfairUpper(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-81', region: 'Super Metroid', name: 'Missile (above Crocomire)',
+    check: (i) => (canAccessHeatedNorfairUpper(i) && (canFly(i) || smHasGrapple(i) || (smHasHiJump(i) && smHasSpeed(i)))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-82', region: 'Super Metroid', name: 'Missile (lava room)',
+    check: (i) => (canAccessHeatedNorfairUpper(i) && (smHasGravity(i) || smHasSpace(i) || smHasHiJump(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-83', region: 'Super Metroid', name: 'Missile (bubble Norfair)',
+    check: (i) => canAccessHeatedNorfairUpper(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-84', region: 'Super Metroid', name: 'Missile (Wave Beam)',
+    check: (i) => canAccessHeatedNorfairUpper(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-85', region: 'Super Metroid', name: 'Wave Beam',
+    check: (i) => canAccessHeatedNorfairUpper(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-86', region: 'Super Metroid', name: 'Missile (lower Norfair near Wave Beam)',
+    check: (i) => canAccessLowerNorfair(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-87', region: 'Super Metroid', name: 'Missile (lower Norfair above fire flea room)',
+    check: (i) => canAccessLowerNorfair(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-88', region: 'Super Metroid', name: 'Power Bomb (lower Norfair above fire flea room)',
+    check: (i) => canAccessLowerNorfair(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-89', region: 'Super Metroid', name: 'Power Bomb (Crocomire)',
+    check: (i) => (canAccessHeatedNorfairUpper(i) && (canFly(i) || smHasGrapple(i) || (smHasHiJump(i) && smHasSpeed(i))) && smHasSuper(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-90', region: 'Super Metroid', name: 'Energy Tank, Crocomire',
+    check: (i) => (canAccessHeatedNorfairUpper(i) && (canFly(i) || smHasGrapple(i) || (smHasHiJump(i) && smHasSpeed(i))) && smHasSuper(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-91', region: 'Super Metroid', name: 'Missile (Mickey Mouse room)',
+    check: (i) => canAccessLowerNorfair(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-92', region: 'Super Metroid', name: 'Energy Tank, Firefleas',
+    check: (i) => canAccessLowerNorfair(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-93', region: 'Super Metroid', name: 'Grapple Beam',
+    check: (i) => (canAccessHeatedNorfairUpper(i) && smHasSuper(i) && (canFly(i) || smHasSpeed(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-94', region: 'Super Metroid', name: 'Missile (Grapple Beam)',
+    check: (i) => (canAccessHeatedNorfairUpper(i) && smHasSuper(i) && (canFly(i) || smHasSpeed(i))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-95', region: 'Super Metroid', name: 'Missile (below Crocomire)',
+    check: (i) => (canAccessHeatedNorfairUpper(i) && smHasSuper(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-96', region: 'Super Metroid', name: 'Missile (Gold Torizo)',
+    check: (i) => (canAccessLowerNorfair(i) && smHasSpace(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-97', region: 'Super Metroid', name: 'Super Missile (Gold Torizo)',
+    check: (i) => (canAccessLowerNorfair(i) && (smHasSpace(i) || (smHasSpeed(i) && smHasGravity(i)))) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-98', region: 'Super Metroid', name: 'Screw Attack',
+    check: (i) => canAccessLowerNorfair(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-99', region: 'Super Metroid', name: 'Energy Tank, Ridley',
+    check: (i) => canAccessLowerNorfair(i) ? STATE.AVAILABLE : STATE.UNAVAIL },
+  { id: 'sm-nor-100', region: 'Super Metroid', name: 'Power Bomb (Power Bombs of shame)',
+    check: (i) => (canAccessLowerNorfair(i) && canUsePowerBombs(i)) ? STATE.AVAILABLE : STATE.UNAVAIL },
 ];
 
 /* Exports */
