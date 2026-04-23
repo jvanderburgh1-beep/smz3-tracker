@@ -564,6 +564,7 @@ function appendFallback(cell, lines) {
 const MAP_IMG_SRC = {
   lw: 'images/maps/lightworld.png',
   dw: 'images/maps/darkworld.png',
+  sm: 'images/maps/SM_map_full.png',
 };
 
 // Calibrated coordinates produced by the calibrate.html tool. Values are
@@ -654,6 +655,117 @@ const MAP_COORDS = {
   "dung-gt":  { map: "dw", x: 56.26, y: 3.67,  dungeon: true },
 };
 
+// Super Metroid checks — all 100 individual locations from the
+// MapleQueen guide, calibrated against images/maps/SM_map_full.png.
+// These render on the SM sub-tab.
+const SM_COORDS = {
+  // ---- Brinstar (1–28) ----
+  "sm-bri-01": { map: "sm", region: "brinstar", x: 11.52, y: 39.45 },
+  "sm-bri-02": { map: "sm", region: "brinstar", x: 12.99, y: 41.08 },
+  "sm-bri-03": { map: "sm", region: "brinstar", x: 15.72, y: 41.08 },
+  "sm-bri-04": { map: "sm", region: "brinstar", x: 17.09, y: 41.08 },
+  "sm-bri-05": { map: "sm", region: "brinstar", x: 17.09, y: 41.08 },
+  "sm-bri-06": { map: "sm", region: "brinstar", x: 21.39, y: 46.10 },
+  "sm-bri-07": { map: "sm", region: "brinstar", x: 14.36, y: 46.21 },
+  "sm-bri-08": { map: "sm", region: "brinstar", x: 18.55, y: 47.85 },
+  "sm-bri-09": { map: "sm", region: "brinstar", x: 26.95, y: 47.85 },
+  "sm-bri-10": { map: "sm", region: "brinstar", x: 4.59,  y: 51.11 },
+  "sm-bri-11": { map: "sm", region: "brinstar", x: 5.96,  y: 51.11 },
+  "sm-bri-12": { map: "sm", region: "brinstar", x: 21.29, y: 51.11 },
+  "sm-bri-13": { map: "sm", region: "brinstar", x: 21.39, y: 52.86 },
+  "sm-bri-14": { map: "sm", region: "brinstar", x: 31.15, y: 49.48 },
+  "sm-bri-15": { map: "sm", region: "brinstar", x: 29.79, y: 51.11 },
+  "sm-bri-16": { map: "sm", region: "brinstar", x: 32.52, y: 51.11 },
+  "sm-bri-17": { map: "sm", region: "brinstar", x: 28.32, y: 52.75 },
+  "sm-bri-18": { map: "sm", region: "brinstar", x: 36.72, y: 52.75 },
+  "sm-bri-19": { map: "sm", region: "brinstar", x: 38.09, y: 47.85 },
+  "sm-bri-20": { map: "sm", region: "brinstar", x: 38.09, y: 47.85 },
+  "sm-bri-21": { map: "sm", region: "brinstar", x: 42.38, y: 51.11 },
+  "sm-bri-22": { map: "sm", region: "brinstar", x: 42.38, y: 51.11 },
+  "sm-bri-23": { map: "sm", region: "brinstar", x: 46.48, y: 47.85 },
+  "sm-bri-24": { map: "sm", region: "brinstar", x: 45.21, y: 52.86 },
+  "sm-bri-25": { map: "sm", region: "brinstar", x: 46.48, y: 52.86 },
+  "sm-bri-26": { map: "sm", region: "brinstar", x: 8.79,  y: 56.13 },
+  "sm-bri-27": { map: "sm", region: "brinstar", x: 29.69, y: 59.39 },
+  "sm-bri-28": { map: "sm", region: "brinstar", x: 50.68, y: 62.77 },
+  "sm-bri-29": { map: "sm", region: "brinstar", x: 63.18, y: 64.41 },
+  "sm-bri-30": { map: "sm", region: "brinstar", x: 57.71, y: 66.04 },
+  "sm-bri-31": { map: "sm", region: "brinstar", x: 77.34, y: 66.16 },
+  // ---- Crateria (32–44) ----
+  "sm-crt-32": { map: "sm", region: "crateria", x: 17.19, y: 9.36 },
+  "sm-crt-33": { map: "sm", region: "crateria", x: 17.19, y: 9.36 },
+  "sm-crt-34": { map: "sm", region: "crateria", x: 25.59, y: 7.73 },
+  "sm-crt-35": { map: "sm", region: "crateria", x: 47.95, y: 6.10 },
+  "sm-crt-36": { map: "sm", region: "crateria", x: 52.05, y: 11.00 },
+  "sm-crt-37": { map: "sm", region: "crateria", x: 54.88, y: 12.75 },
+  "sm-crt-38": { map: "sm", region: "crateria", x: 54.88, y: 7.73 },
+  "sm-crt-39": { map: "sm", region: "crateria", x: 56.25, y: 4.23 },
+  "sm-crt-40": { map: "sm", region: "crateria", x: 18.46, y: 14.38 },
+  "sm-crt-41": { map: "sm", region: "crateria", x: 24.12, y: 16.01 },
+  "sm-crt-42": { map: "sm", region: "crateria", x: 36.72, y: 14.38 },
+  "sm-crt-43": { map: "sm", region: "crateria", x: 35.25, y: 19.51 },
+  "sm-crt-44": { map: "sm", region: "crateria", x: 29.69, y: 34.44 },
+  // ---- Wrecked Ship (45–52) ----
+  "sm-ws-45":  { map: "sm", region: "wrecked", x: 78.71, y: 4.35 },
+  "sm-ws-46":  { map: "sm", region: "wrecked", x: 70.31, y: 5.98 },
+  "sm-ws-47":  { map: "sm", region: "wrecked", x: 63.28, y: 9.36 },
+  "sm-ws-48":  { map: "sm", region: "wrecked", x: 68.95, y: 7.73 },
+  "sm-ws-49":  { map: "sm", region: "wrecked", x: 74.51, y: 9.36 },
+  "sm-ws-50":  { map: "sm", region: "wrecked", x: 66.02, y: 14.50 },
+  "sm-ws-51":  { map: "sm", region: "wrecked", x: 70.31, y: 16.13 },
+  "sm-ws-52":  { map: "sm", region: "wrecked", x: 78.71, y: 16.01 },
+  // ---- Maridia (53–70) ----
+  "sm-mar-53": { map: "sm", region: "maridia", x: 75.88, y: 37.82 },
+  "sm-mar-54": { map: "sm", region: "maridia", x: 53.52, y: 44.47 },
+  "sm-mar-55": { map: "sm", region: "maridia", x: 53.52, y: 44.47 },
+  "sm-mar-56": { map: "sm", region: "maridia", x: 64.65, y: 44.35 },
+  "sm-mar-57": { map: "sm", region: "maridia", x: 95.51, y: 46.21 },
+  "sm-mar-58": { map: "sm", region: "maridia", x: 70.21, y: 49.48 },
+  "sm-mar-59": { map: "sm", region: "maridia", x: 71.68, y: 49.48 },
+  "sm-mar-60": { map: "sm", region: "maridia", x: 77.25, y: 47.85 },
+  "sm-mar-61": { map: "sm", region: "maridia", x: 89.94, y: 51.11 },
+  "sm-mar-62": { map: "sm", region: "maridia", x: 52.15, y: 52.75 },
+  "sm-mar-63": { map: "sm", region: "maridia", x: 50.68, y: 54.49 },
+  "sm-mar-64": { map: "sm", region: "maridia", x: 61.91, y: 54.49 },
+  "sm-mar-65": { map: "sm", region: "maridia", x: 63.28, y: 56.01 },
+  "sm-mar-66": { map: "sm", region: "maridia", x: 64.65, y: 57.88 },
+  "sm-mar-67": { map: "sm", region: "maridia", x: 64.65, y: 57.88 },
+  "sm-mar-68": { map: "sm", region: "maridia", x: 68.95, y: 57.76 },
+  "sm-mar-69": { map: "sm", region: "maridia", x: 70.31, y: 59.39 },
+  "sm-mar-70": { map: "sm", region: "maridia", x: 82.91, y: 61.14 },
+  // ---- Norfair / Lower Norfair (71–100) ----
+  "sm-nor-71": { map: "sm", region: "norfair", x: 47.95, y: 71.17 },
+  "sm-nor-72": { map: "sm", region: "norfair", x: 66.11, y: 71.17 },
+  "sm-nor-73": { map: "sm", region: "norfair", x: 67.38, y: 71.17 },
+  "sm-nor-74": { map: "sm", region: "norfair", x: 70.31, y: 71.17 },
+  "sm-nor-75": { map: "sm", region: "norfair", x: 91.02, y: 71.17 },
+  "sm-nor-76": { map: "sm", region: "norfair", x: 92.68, y: 71.17 },
+  "sm-nor-77": { map: "sm", region: "norfair", x: 43.65, y: 74.44 },
+  "sm-nor-78": { map: "sm", region: "norfair", x: 50.68, y: 77.82 },
+  "sm-nor-79": { map: "sm", region: "norfair", x: 52.05, y: 76.30 },
+  "sm-nor-80": { map: "sm", region: "norfair", x: 53.52, y: 76.30 },
+  "sm-nor-81": { map: "sm", region: "norfair", x: 56.35, y: 77.93 },
+  "sm-nor-82": { map: "sm", region: "norfair", x: 62.11, y: 74.44 },
+  "sm-nor-83": { map: "sm", region: "norfair", x: 73.14, y: 75.95 },
+  "sm-nor-84": { map: "sm", region: "norfair", x: 77.25, y: 74.44 },
+  "sm-nor-85": { map: "sm", region: "norfair", x: 81.45, y: 74.44 },
+  "sm-nor-86": { map: "sm", region: "norfair", x: 81.45, y: 76.19 },
+  "sm-nor-87": { map: "sm", region: "norfair", x: 89.84, y: 76.19 },
+  "sm-nor-88": { map: "sm", region: "norfair", x: 92.68, y: 77.93 },
+  "sm-nor-89": { map: "sm", region: "norfair", x: 53.52, y: 84.58 },
+  "sm-nor-90": { map: "sm", region: "norfair", x: 67.48, y: 84.46 },
+  "sm-nor-91": { map: "sm", region: "norfair", x: 80.18, y: 84.46 },
+  "sm-nor-92": { map: "sm", region: "norfair", x: 92.68, y: 85.86 },
+  "sm-nor-93": { map: "sm", region: "norfair", x: 45.12, y: 94.61 },
+  "sm-nor-94": { map: "sm", region: "norfair", x: 52.05, y: 92.86 },
+  "sm-nor-95": { map: "sm", region: "norfair", x: 60.55, y: 92.86 },
+  "sm-nor-96": { map: "sm", region: "norfair", x: 66.11, y: 92.86 },
+  "sm-nor-97": { map: "sm", region: "norfair", x: 67.48, y: 92.86 },
+  "sm-nor-98": { map: "sm", region: "norfair", x: 68.95, y: 94.49 },
+  "sm-nor-99": { map: "sm", region: "norfair", x: 71.68, y: 96.24 },
+  "sm-nor-100": { map: "sm", region: "norfair", x: 85.74, y: 91.23 },
+};
+
 // Mapping from dungeon id on the map → dungeon id in state.dungeons
 // (map ids have the dung- prefix; state ids don't).
 function dungeonIdFor(markerId) {
@@ -663,10 +775,24 @@ function dungeonIdFor(markerId) {
 let mapsInitialized = false;
 function ensureMapImages() {
   if (mapsInitialized) return;
-  const lwImg = document.getElementById('map-lw-img');
-  const dwImg = document.getElementById('map-dw-img');
-  if (lwImg && !lwImg.src) lwImg.src = MAP_IMG_SRC.lw;
-  if (dwImg && !dwImg.src) dwImg.src = MAP_IMG_SRC.dw;
+  // For each map, set the source AND register a one-shot load handler that
+  // matches the container's aspect-ratio to the image's natural dimensions.
+  // This makes object-fit:contain a no-op (no letterboxing), so percentage-
+  // based marker coordinates land exactly where the calibrator placed them.
+  const setupMap = (mapKey) => {
+    const img = document.getElementById('map-' + mapKey + '-img');
+    if (!img || img.src) return;
+    img.src = MAP_IMG_SRC[mapKey];
+    img.addEventListener('load', () => {
+      const container = document.getElementById('map-' + mapKey);
+      if (container && img.naturalWidth && img.naturalHeight) {
+        container.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+      }
+    }, { once: true });
+  };
+  setupMap('lw');
+  setupMap('dw');
+  setupMap('sm');
   mapsInitialized = true;
 }
 
@@ -689,7 +815,14 @@ function renderLocations() {
   ensureMapImages();
   renderMapMarkers('lw');
   renderMapMarkers('dw');
-  renderSMLocationsList();
+  renderMapMarkers('sm');
+}
+
+// Combined coordinate lookup — both LW/DW (MAP_COORDS) and SM (SM_COORDS).
+// LW/DW entries can have `dungeon: true` to flag dungeon markers.
+function coordsForMap(mapKey) {
+  if (mapKey === 'sm') return SM_COORDS;
+  return MAP_COORDS;
 }
 
 function renderMapMarkers(mapKey) {
@@ -697,7 +830,7 @@ function renderMapMarkers(mapKey) {
   if (!host) return;
   host.innerHTML = '';
 
-  Object.entries(MAP_COORDS).forEach(([id, coord]) => {
+  Object.entries(coordsForMap(mapKey)).forEach(([id, coord]) => {
     if (coord.map !== mapKey) return;
 
     const isDungeon = !!coord.dungeon;
@@ -735,30 +868,6 @@ function renderMapMarkers(mapKey) {
       }
     });
     host.appendChild(m);
-  });
-}
-
-function renderSMLocationsList() {
-  const sm = document.getElementById('locs-sm');
-  if (!sm) return;
-  sm.innerHTML = '';
-  ALL_LOCATIONS.forEach(loc => {
-    if (loc.region !== 'Super Metroid') return;
-    const isChecked = !!state.checked[loc.id];
-    const st = isChecked ? ST.CHECKED : loc.check(state.items, state);
-    const node = document.createElement('div');
-    node.className = 'location state-' + st;
-    node.dataset.id = loc.id;
-    node.innerHTML = `
-      <div class="loc-name">${loc.name}<span class="loc-region">${loc.region}</span></div>
-      <div class="loc-badge">${badgeLabel(st)}</div>
-    `;
-    node.addEventListener('click', () => {
-      state.checked[loc.id] = !state.checked[loc.id];
-      saveState();
-      renderSMLocationsList();
-    });
-    sm.appendChild(node);
   });
 }
 
