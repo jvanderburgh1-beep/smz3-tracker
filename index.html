@@ -94,7 +94,6 @@
   <!-- Tiny legend strip so you know what the marker colors mean -->
   <div class="loc-legend">
     <div class="legend-item"><span class="swatch swatch-available"></span>Avail</div>
-    <div class="legend-item"><span class="swatch swatch-dark"></span>Dark</div>
     <div class="legend-item"><span class="swatch swatch-visible"></span>Visible</div>
     <div class="legend-item"><span class="swatch swatch-partial"></span>Partial</div>
     <div class="legend-item"><span class="swatch swatch-unavailable"></span>Unreach</div>
@@ -175,7 +174,19 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(err => {
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        // Check for SW updates whenever the app is reopened or pulled to refresh
+        reg.update();
+        // When the controller changes (a new SW took over), reload the page
+        // so the user picks up the new HTML/CSS/JS atomically rather than
+        // running a half-old half-new mix.
+        let reloaded = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (reloaded) return;
+          reloaded = true;
+          window.location.reload();
+        });
+      }).catch(err => {
         console.warn('SW registration failed:', err);
       });
     });
