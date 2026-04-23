@@ -84,10 +84,11 @@
 <!-- ============ LOCATIONS TAB ============ -->
 <section class="panel hidden" id="panel-locations" data-panel="locations">
 
-  <!-- Sub-tabs for Light World / Dark World -->
-  <div class="subtabs" role="tablist">
+  <!-- Sub-tabs for Light World / Dark World / Super Metroid -->
+  <div class="subtabs subtabs-3" role="tablist">
     <button class="subtab subtab-lw active" data-subtab="lw" role="tab" aria-selected="true">Light World</button>
     <button class="subtab subtab-dw" data-subtab="dw" role="tab" aria-selected="false">Dark World</button>
+    <button class="subtab subtab-sm" data-subtab="sm" role="tab" aria-selected="false">Super Metroid</button>
   </div>
 
   <!-- Tiny legend strip so you know what the marker colors mean -->
@@ -117,10 +118,12 @@
     </div>
   </div>
 
-  <!-- SM locations still use the list view for now -->
-  <div class="section">
-    <h2 class="section-title">Super Metroid</h2>
-    <div class="loc-list" id="locs-sm"></div>
+  <!-- Super Metroid map -->
+  <div class="map-panel" data-map="sm">
+    <div class="map-container map-container-sm" id="map-sm">
+      <img class="map-img" id="map-sm-img" alt="Super Metroid map">
+      <div class="map-markers" id="markers-sm"></div>
+    </div>
   </div>
 
 </section>
