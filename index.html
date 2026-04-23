@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=15">
   <title>SMZ3 Tracker</title>
 </head>
 <body>
@@ -169,9 +169,32 @@
   </div>
 </div>
 
-<script src="logic.js"></script>
-<script src="tracker.js"></script>
+<script src="logic.js?v=15"></script>
+<script src="tracker.js?v=15"></script>
 <script>
+  // Kill-switch: visiting `?reset=1` unregisters every service worker
+  // for this scope and deletes every cache, then reloads onto a clean
+  // URL. Useful as an escape hatch when a buggy old SW is stuck and
+  // ordinary refreshes won't shake it loose.
+  (function () {
+    if (!location.search.includes('reset=1')) return;
+    document.body && document.body.insertAdjacentHTML('afterbegin',
+      '<div style="position:fixed;inset:0;background:#0d1117;color:#fff;font:16px sans-serif;display:flex;align-items:center;justify-content:center;z-index:9999;text-align:center;padding:20px;">Resetting service worker and caches…</div>');
+    Promise.all([
+      navigator.serviceWorker
+        ? navigator.serviceWorker.getRegistrations().then(rs =>
+            Promise.all(rs.map(r => r.unregister())))
+        : Promise.resolve(),
+      window.caches
+        ? caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+        : Promise.resolve(),
+    ]).then(() => {
+      // Strip the query string so the next reload doesn't loop
+      location.replace(location.pathname);
+    });
+    return;  // skip normal SW registration on a reset run
+  })();
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').then(reg => {
