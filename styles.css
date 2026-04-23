@@ -18,7 +18,6 @@
   --boss: #d64545;
 
   --avail:       #4ade80;   /* green — available */
-  --avail-dark:  #60a5fa;   /* blue — dark room */
   --visible:     #facc15;   /* yellow — visible */
   --partial:     #fb923c;   /* orange — partial */
   --unavail:     #ef4444;   /* red — blocked */
@@ -162,12 +161,16 @@ main {
 /* =============================================================
    Item grid — fixed 5-column layout to match in-game menu structure.
    Cells are box-free: just the sprite, grayscaled when off and full
-   color when on. No labels, tight spacing.
+   color when on. No labels, tight spacing. Grid is intentionally
+   capped at a small width so the items occupy a compact area on
+   the page rather than stretching across the screen.
    ============================================================= */
 .item-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 2px;
+  max-width: 88px;
+  margin-left: 0;  /* left-aligned so the grid sits in a tidy block */
 }
 .item-grid.compact {
   /* Boss row — still 5 wide so it vertically aligns with the items grid */
@@ -185,7 +188,7 @@ main {
 .item {
   position: relative;
   aspect-ratio: 1 / 1;
-  min-height: 44px;
+  min-height: 16px;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -194,7 +197,7 @@ main {
   cursor: pointer;
   color: var(--text-faint);
   transition: transform .08s;
-  padding: 2px;
+  padding: 1px;
 }
 .item:active { transform: scale(0.90); }
 
@@ -242,16 +245,18 @@ main {
   opacity: 1;
 }
 
-/* Level badge (sword L1-L4, glove L1-L2, bow silvers, bottle count) */
+/* Level badge (sword L1-L4, glove L1-L2, bow silvers, bottle count).
+   Sized small to fit comfortably on the compact item cells. */
 .item .level {
   position: absolute;
-  top: -2px; right: -2px;
-  font-size: 10px;
+  top: -1px; right: -1px;
+  font-size: 6px;
+  line-height: 1;
   font-weight: 800;
   color: var(--bg);
   background: var(--accent);
-  padding: 1px 5px;
-  border-radius: 10px;
+  padding: 1px 2px;
+  border-radius: 4px;
   display: none;
   z-index: 1;
   box-shadow: 0 0 0 1px var(--bg);
@@ -516,7 +521,6 @@ main {
   vertical-align: -1px;
 }
 .swatch-available   { background: var(--avail); }
-.swatch-dark        { background: var(--avail-dark); }
 .swatch-visible     { background: var(--visible); }
 .swatch-partial     { background: var(--partial); }
 .swatch-unavailable { background: var(--unavail); }
@@ -592,7 +596,6 @@ main {
 .map-marker:active { transform: scale(1.4); }
 
 .map-marker.state-available   { background: var(--avail); }
-.map-marker.state-dark        { background: var(--avail-dark); }
 .map-marker.state-visible     { background: var(--visible); }
 .map-marker.state-partial     { background: var(--partial); }
 .map-marker.state-unavailable { background: var(--unavail); }
@@ -659,7 +662,6 @@ main {
 .location:active { background: var(--bg-elev-2); }
 
 .location.state-available   { border-left-color: var(--avail); }
-.location.state-dark        { border-left-color: var(--avail-dark); }
 .location.state-visible     { border-left-color: var(--visible); }
 .location.state-partial     { border-left-color: var(--partial); }
 .location.state-unavailable { border-left-color: var(--unavail); }
@@ -696,7 +698,6 @@ main {
   flex-shrink: 0;
 }
 .state-available   .loc-badge { background: rgba(74,222,128,0.15); color: var(--avail); }
-.state-dark        .loc-badge { background: rgba(96,165,250,0.15); color: var(--avail-dark); }
 .state-visible     .loc-badge { background: rgba(250,204,21,0.15); color: var(--visible); }
 .state-partial     .loc-badge { background: rgba(251,146,60,0.15); color: var(--partial); }
 .state-unavailable .loc-badge { background: rgba(239,68,68,0.12);  color: var(--unavail); }
