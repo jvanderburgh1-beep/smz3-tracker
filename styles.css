@@ -18,7 +18,8 @@
   --boss: #d64545;
 
   --avail:       #4ade80;   /* green — available */
-  --visible:     #facc15;   /* yellow — visible */
+  --visible:     #38bdf8;   /* blue — visible */
+  --glitched:    #facc15;   /* yellow — reachable only via Hard-logic tricks */
   --partial:     #fb923c;   /* orange — partial */
   --unavail:     #ef4444;   /* red — blocked */
   --checked:     #4b5765;   /* gray — checked */
@@ -522,6 +523,7 @@ main {
 }
 .swatch-available   { background: var(--avail); }
 .swatch-visible     { background: var(--visible); }
+.swatch-glitched    { background: var(--glitched); }
 .swatch-partial     { background: var(--partial); }
 .swatch-unavailable { background: var(--unavail); }
 .swatch-checked     { background: var(--checked); }
@@ -597,6 +599,7 @@ main {
 
 .map-marker.state-available   { background: var(--avail); }
 .map-marker.state-visible     { background: var(--visible); }
+.map-marker.state-glitched    { background: var(--glitched); }
 .map-marker.state-partial     { background: var(--partial); }
 .map-marker.state-unavailable { background: var(--unavail); }
 .map-marker.state-checked {
@@ -663,6 +666,7 @@ main {
 
 .location.state-available   { border-left-color: var(--avail); }
 .location.state-visible     { border-left-color: var(--visible); }
+.location.state-glitched    { border-left-color: var(--glitched); }
 .location.state-partial     { border-left-color: var(--partial); }
 .location.state-unavailable { border-left-color: var(--unavail); }
 .location.state-checked     {
@@ -698,7 +702,8 @@ main {
   flex-shrink: 0;
 }
 .state-available   .loc-badge { background: rgba(74,222,128,0.15); color: var(--avail); }
-.state-visible     .loc-badge { background: rgba(250,204,21,0.15); color: var(--visible); }
+.state-visible     .loc-badge { background: rgba(56,189,248,0.15); color: var(--visible); }
+.state-glitched    .loc-badge { background: rgba(250,204,21,0.15); color: var(--glitched); }
 .state-partial     .loc-badge { background: rgba(251,146,60,0.15); color: var(--partial); }
 .state-unavailable .loc-badge { background: rgba(239,68,68,0.12);  color: var(--unavail); }
 .state-checked     .loc-badge { background: var(--border);         color: var(--text-faint); }
