@@ -550,7 +550,54 @@ main {
   -webkit-user-select: none;
   border-radius: var(--radius-sm);
   overflow: hidden;
+  /* Stop the browser from doing its own pinch-zoom or pan when the
+     user drags inside the map — we handle gestures manually. */
+  touch-action: none;
 }
+
+/* The zoom layer fills the container; transforms are applied here so
+   the img and markers scale together while the container stays put
+   (and clips overflow). transform-origin: 0 0 keeps math simple — we
+   compute translation in container-pixel space. */
+.map-zoom {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  /* Disable transition by default — applied dynamically when resetting */
+  will-change: transform;
+}
+.map-zoom.animating {
+  transition: transform 200ms ease-out;
+}
+
+/* Reset zoom button — small floating control in the top-right of each map */
+.map-reset-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 5;
+  display: none;  /* hidden until zoomed */
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.map-container.zoomed .map-reset-btn {
+  display: flex;
+}
+.map-reset-btn:active {
+  background: rgba(0, 0, 0, 0.75);
+}
+
 /* SM map — use the natural image dimensions. We give it a 1:1 fallback
    so markers position correctly while the image loads; once the image
    has loaded its natural dimensions take over via the height: auto rule. */
@@ -574,6 +621,9 @@ main {
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
   border-radius: var(--radius-sm);
+  /* Don't let the image become a drag target on desktop */
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 .map-markers {
   position: absolute;
