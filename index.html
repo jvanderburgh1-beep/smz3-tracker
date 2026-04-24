@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=21">
+  <link rel="stylesheet" href="styles.css?v=23">
   <title>SMZ3 Tracker</title>
 </head>
 <body>
@@ -105,24 +105,33 @@
   <!-- Light World map -->
   <div class="map-panel active" data-map="lw">
     <div class="map-container" id="map-lw">
-      <img class="map-img" id="map-lw-img" alt="Light World map">
-      <div class="map-markers" id="markers-lw"></div>
+      <div class="map-zoom" id="zoom-lw">
+        <img class="map-img" id="map-lw-img" alt="Light World map">
+        <div class="map-markers" id="markers-lw"></div>
+      </div>
+      <button class="map-reset-btn" id="reset-lw" title="Reset zoom" aria-label="Reset zoom">⟲</button>
     </div>
   </div>
 
   <!-- Dark World map -->
   <div class="map-panel" data-map="dw">
     <div class="map-container" id="map-dw">
-      <img class="map-img" id="map-dw-img" alt="Dark World map">
-      <div class="map-markers" id="markers-dw"></div>
+      <div class="map-zoom" id="zoom-dw">
+        <img class="map-img" id="map-dw-img" alt="Dark World map">
+        <div class="map-markers" id="markers-dw"></div>
+      </div>
+      <button class="map-reset-btn" id="reset-dw" title="Reset zoom" aria-label="Reset zoom">⟲</button>
     </div>
   </div>
 
   <!-- Super Metroid map -->
   <div class="map-panel" data-map="sm">
     <div class="map-container map-container-sm" id="map-sm">
-      <img class="map-img" id="map-sm-img" alt="Super Metroid map">
-      <div class="map-markers" id="markers-sm"></div>
+      <div class="map-zoom" id="zoom-sm">
+        <img class="map-img" id="map-sm-img" alt="Super Metroid map">
+        <div class="map-markers" id="markers-sm"></div>
+      </div>
+      <button class="map-reset-btn" id="reset-sm" title="Reset zoom" aria-label="Reset zoom">⟲</button>
     </div>
   </div>
 
@@ -170,8 +179,8 @@
   </div>
 </div>
 
-<script src="logic.js?v=21"></script>
-<script src="tracker.js?v=21"></script>
+<script src="logic.js?v=23"></script>
+<script src="tracker.js?v=23"></script>
 <script>
   // Kill-switch: visiting `?reset=1` unregisters every service worker
   // for this scope and deletes every cache, then reloads onto a clean
