@@ -210,6 +210,47 @@ function canEnterAndLeaveGauntlet(i) {
   return canDestroyBombWalls(i) || (smHasSpeed(i) && smHasMorph(i));
 }
 
+/* -------------------------------------------------------------
+   Cross-game portals — vanilla SMZ3.
+   Four portals connect ALttP and SM. Reaching the ALttP side
+   of a portal grants access to the SM side, AND vice versa.
+   For now we model the ALttP→SM direction (the more common
+   case where ALttP routes unblock SM regions). The reverse
+   direction (SM→ALttP) is left for a future pass.
+   ------------------------------------------------------------- */
+
+// Norfair Upper Portal — LW Death Mountain in front of Turtle Rock
+// drops into Upper Norfair. Source: SMZ3 Item.cs CanAccessNorfairUpperPortal
+//   = Flute OR (any glove + Lantern)
+function canAccessNorfairUpperPortal(i) {
+  return has(i, 'flute') || (anyGlove(i) && lantern(i));
+}
+
+// Norfair Lower (West) Portal — Misery Mire entry square portals
+// into Lower Norfair (Wrecked-Ship-side).
+// Source: SMZ3 Item.cs CanAccessNorfairLowerPortal = Flute + Titan glove
+function canAccessNorfairLowerPortal(i) {
+  return has(i, 'flute') && titan(i);
+}
+
+// Maridia Portal — Crateria moat island accessible from outside
+// the Wrecked Ship. The ALttP-side version requires standing on
+// the sand / quicksand entry near the pyramid.
+// Source: SMZ3 Item.cs CanAccessMaridiaPortal (Normal logic):
+//   Moonpearl + Flippers + Gravity + Morph + (Aga OR (Hammer+Glove) OR Titan)
+// Treat this as the ALttP-route way to reach Maridia.
+function canAccessMaridiaPortal(i) {
+  return has(i, 'moonpearl') && has(i, 'flippers') &&
+         smHasGravity(i) && smHasMorph(i) &&
+         (canReachDWViaAgahnim(i) || (has(i, 'hammer') && anyGlove(i)) || titan(i));
+}
+
+// Wrecked Ship Portal — DW Northwest (Skull Woods area) connects to
+// the Wrecked Ship exterior. Once you can reach DW NW you can portal in.
+function canAccessWreckedShipPortal(i) {
+  return canReachDarkWorldNorthWest(i);
+}
+
 // Old Mother Brain / Tourian elevator — basic Crateria movement
 function canAccessRedBrinstar(i) {
   return canOpenGreenDoors(i) && (canDestroyBombWalls(i) || smHasHiJump(i));
@@ -220,28 +261,38 @@ function canAccessKraid(i) {
 }
 
 function canAccessHeatedNorfairUpper(i) {
-  // Need to enter Upper Norfair from Brinstar elevator and survive heat.
-  // SMZ3 standard: needs hellrun-friendly kit OR varia
-  return canAccessRedBrinstar(i) && hasHeatShield(i);
+  // Two ways in:
+  //   (a) Brinstar elevator: Red Brinstar + heat shield (vanilla SM path)
+  //   (b) Norfair Upper Portal from LW DM East / Turtle Rock area
+  //       (still need heat protection unless you carry fast)
+  return (canAccessRedBrinstar(i) && hasHeatShield(i)) ||
+         (canAccessNorfairUpperPortal(i) && hasHeatShield(i));
 }
 
 function canAccessNorfairUpper(i) {
   // Norfair entry — to even reach the elevator from red Brinstar
-  return canAccessRedBrinstar(i);
+  return canAccessRedBrinstar(i) || canAccessNorfairUpperPortal(i);
 }
 
 function canAccessLowerNorfair(i) {
-  // Need varia (heat), super (bridge door), and either space jump OR
-  // gravity+hijump combo to traverse lower norfair lava rooms.
-  return canAccessNorfairUpper(i) &&
-         smHasVaria(i) && canUsePowerBombs(i) &&
-         (smHasSpace(i) || (smHasGravity(i) && smHasHiJump(i)));
+  // Two ways in:
+  //   (a) Through Upper Norfair: Varia + power bombs + Space Jump (or Gravity+HiJump)
+  //   (b) Norfair Lower Portal from Misery Mire area — drops you straight into LN
+  //       and you still need Varia for the heat. (No Space Jump strictly needed
+  //       since you start from a different entry point.)
+  const sideA = canAccessNorfairUpper(i) &&
+                smHasVaria(i) && canUsePowerBombs(i) &&
+                (smHasSpace(i) || (smHasGravity(i) && smHasHiJump(i)));
+  const sideB = canAccessNorfairLowerPortal(i) && smHasVaria(i) && canUsePowerBombs(i);
+  return sideA || sideB;
 }
 
 function canAccessWreckedShip(i) {
-  // Phantoon's Ship — need supers + (power bombs OR speed) to bypass.
-  // Beating Phantoon needs supers; entering needs supers + PBs.
-  return canUsePowerBombs(i) && canOpenGreenDoors(i);
+  // Two ways in:
+  //   (a) SM Crateria path: power bombs + supers
+  //   (b) Wrecked Ship Portal from DW Northwest (Skull Woods area)
+  return (canUsePowerBombs(i) && canOpenGreenDoors(i)) ||
+         canAccessWreckedShipPortal(i);
 }
 
 function canDefeatPhantoon(i) {
@@ -251,9 +302,13 @@ function canDefeatPhantoon(i) {
 }
 
 function canAccessOuterMaridia(i) {
-  // Reach Maridia — supers + (gravity OR (hijump+ice)) for getting through quicksand
-  return canAccessRedBrinstar(i) && canUsePowerBombs(i) &&
-         (smHasGravity(i) || (smHasHiJump(i) && smHasIce(i)));
+  // Two ways in:
+  //   (a) SM-side: Red Brinstar + power bombs + (Gravity OR HiJump+Ice)
+  //   (b) Maridia Portal from Crateria moat (via the pyramid area in DW)
+  const sideA = canAccessRedBrinstar(i) && canUsePowerBombs(i) &&
+                (smHasGravity(i) || (smHasHiJump(i) && smHasIce(i)));
+  const sideB = canAccessMaridiaPortal(i);  // already requires Gravity+Morph
+  return sideA || sideB;
 }
 
 function canAccessInnerMaridia(i) {
