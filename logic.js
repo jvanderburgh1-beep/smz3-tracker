@@ -2150,16 +2150,15 @@ function z3DungeonHC(i) {
   return { chestsReachable: n, boss: STATE.AVAILABLE }; // HC has no real boss
 }
 
-// Castle Tower:
-//   Foyer: unconditional
-//   Dark Maze: Lamp + Key (assumed)
+// Castle Tower (boss-only for tracking):
+//   Foyer and Dark Maze chests exist in the randomizer but are rarely
+//   tracked — the important state is "have you beaten Agahnim?" which
+//   is the boss flag. Report 0 chests; the tracker.js code hides the
+//   chest row when totalChests === 0.
 //   Boss (Agahnim): Lamp + 2 Keys (assumed) + Sword
 function z3DungeonAT(i) {
-  let n = 1; // foyer
-  if (has(i, 'lantern')) n += 1; // dark maze
   const boss = (has(i, 'lantern') && (i.sword || 0) >= 1) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  if (boss === STATE.AVAILABLE) n += 1;
-  return { chestsReachable: n, boss };
+  return { chestsReachable: 0, boss };
 }
 
 // Palace of Darkness:
@@ -2328,7 +2327,7 @@ const Z3_DUNGEONS_NEW = {
         entry: z3CanEnterTowerOfHera, run: z3DungeonTOH, hasMedallion: false },
   hc: { name: 'Hyrule Castle',      region: 'Light World', totalChests: 8,
         entry: z3CanEnterHyruleCastle, run: z3DungeonHC, hasMedallion: false },
-  at: { name: 'Castle Tower',       region: 'Light World', totalChests: 2,
+  at: { name: 'Castle Tower',       region: 'Light World', totalChests: 0,
         entry: z3CanEnterCastleTower, run: z3DungeonAT, hasMedallion: false },
   pod:{ name: 'Palace of Darkness', region: 'Dark World',  totalChests: 14,
         entry: z3CanEnterPalaceOfDarkness, run: z3DungeonPOD, hasMedallion: false },
