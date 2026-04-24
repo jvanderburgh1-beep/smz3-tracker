@@ -63,6 +63,9 @@ const Z3_ITEMS = [
   { id: 'flippers',  kind: 'bool',           label: 'Flippers', glyph: '~', img: IMG_Z3+'flippers.png' },
   { id: 'glove',     kind: 'level', max: 2, label: 'Glove',     glyph: '✊', tip: 'Power → Titan',
     img: [IMG_Z3+'glove1.png', IMG_Z3+'glove2.png'] },
+  // Row 6 — extras
+  { id: 'halfMagic', kind: 'bool',           label: '½ Magic',  glyph: '½', img: IMG_Z3+'halfmagic.png',
+    tip: 'Half Magic — doubles magic supply (used for Cape/Spike Cave reachability and a few dungeon tricks)' },
 ];
 
 // Super Metroid items — order matches the in-game pause-menu layout (5 per row):
@@ -95,11 +98,12 @@ const SM_ITEMS = [
   { id: 'grapple',  kind: 'bool', label: 'Grapple', glyph: '⟿', img: IMG_SM+'grapple.png' },
   { id: 'xray',     kind: 'bool', label: 'X-Ray',   glyph: '✕',  img: IMG_SM+'xray.png' },
   { kind: 'spacer' },
-  // Row 5 — ammo
-  { id: 'missile',  kind: 'bool', label: 'Missile', glyph: 'M',  img: IMG_SM+'missile.png' },
-  { id: 'super',    kind: 'bool', label: 'Super',   glyph: 'S',  img: IMG_SM+'supermissile.png' },
-  { id: 'pb',       kind: 'bool', label: 'PBomb',   glyph: 'PB', img: IMG_SM+'powerbomb.png' },
-  { kind: 'spacer' }, { kind: 'spacer' },
+  // Row 5 — ammo + tanks
+  { id: 'missile',  kind: 'bool',  label: 'Missile', glyph: 'M',  img: IMG_SM+'missile.png' },
+  { id: 'super',    kind: 'bool',  label: 'Super',   glyph: 'S',  img: IMG_SM+'supermissile.png' },
+  { id: 'pb',       kind: 'bool',  label: 'PBomb',   glyph: 'PB', img: IMG_SM+'powerbomb.png' },
+  { id: 'etank',    kind: 'level', max: 14, label: 'E-Tank',  glyph: 'E',  img: IMG_SM+'etank.png',  tip: 'Energy tanks (0–14)' },
+  { id: 'reserve',  kind: 'level', max: 4,  label: 'Reserve', glyph: 'R',  img: IMG_SM+'reserve.png', tip: 'Reserve tanks (0–4)' },
 ];
 
 const SM_BOSSES = [
@@ -821,11 +825,19 @@ function dungeonMarkerState(dungId) {
 // no longer surface it as a distinct color — treat it as available.
 // Keeping this as a single-point shim makes it easy to bring the
 // "dark" color back later without touching the logic engine.
+//
+// STATE.GLITCHED is rendered as-is (yellow marker). It signals that a
+// check is reachable only via Hard-logic tricks — useful info for
+// runners who play with tricks but want to see the canonical Normal
+// path separately.
 function displayState(s) {
   return s === ST.DARK ? ST.AVAILABLE : s;
 }
 
 function renderLocations() {
+  // Refresh runtime state for logic — same reason as rerenderAll().
+  // Marker taps re-call renderMapMarkers without going through rerenderAll.
+  if (LOGIC.setRuntimeState) LOGIC.setRuntimeState(state);
   ensureMapImages();
   renderMapMarkers('lw');
   renderMapMarkers('dw');
@@ -895,6 +907,7 @@ function badgeLabel(s) {
     case ST.AVAILABLE: return 'Available';
     case ST.DARK:      return 'Available';  // dark logic preserved but rendered as available
     case ST.VISIBLE:   return 'Visible';
+    case ST.GLITCHED:  return 'Hard logic';
     case ST.PARTIAL:   return 'Partial';
     case ST.UNAVAIL:   return 'Blocked';
     case ST.CHECKED:   return 'Checked';
@@ -905,6 +918,12 @@ function badgeLabel(s) {
 /* ---------- Master re-render ---------- */
 
 function rerenderAll() {
+  // Hand the current state to logic.js so dungeon predicates that
+  // need to read prize/medallion data (Pyramid Fairy, Sahasrahla,
+  // Misery Mire/Turtle Rock medallion, GT crystal count, etc.)
+  // can do so without us threading `state` through every call.
+  if (LOGIC.setRuntimeState) LOGIC.setRuntimeState(state);
+
   renderItemGrid('z3-items',    Z3_ITEMS);
   renderItemGrid('sm-bosses',   SM_BOSSES, true);
   renderItemGrid('sm-items',    SM_ITEMS);
