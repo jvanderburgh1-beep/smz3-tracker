@@ -812,6 +812,14 @@ function dungeonMarkerState(dungId) {
   const d = ALL_DUNGEONS[dungId];
   const s = state.dungeons[dungId];
   if (!d || !s) return ST.UNAVAIL;
+  // Boss-only dungeons (Castle Tower) — no chest square to track.
+  // Use boss state, going to CHECKED once boss is defeated.
+  if (d.totalChests === 0) {
+    if (s.boss) return ST.CHECKED;
+    const result = d.check(state.items, s.chests, s.medallion);
+    if (result.boss !== undefined && result.boss !== null) return result.boss;
+    return result.entry ? ST.AVAILABLE : ST.UNAVAIL;
+  }
   if (s.boss && s.chests <= 0) return ST.CHECKED;
   const result = d.check(state.items, s.chests, s.medallion);
   // Prefer chest state when present, else boss state, else entry
@@ -1009,6 +1017,244 @@ function setupSettings() {
 function setupPrizeModal() { /* no-op; prize cycling is now inline tap */ }
 function setupMedallionModal() { /* no-op; medallion cycling is now inline tap */ }
 
+/* ---------- Map zoom + pan ---------- */
+//
+// Pinch-to-zoom and one-finger pan for map containers, no library deps.
+//
+// Architecture: the .map-zoom child of each .map-container holds the
+// img + markers. We apply `transform: translate(tx,ty) scale(scale)`
+// to the .map-zoom layer; CSS overflow:hidden on the container clips
+// what spills outside.
+//
+// transform-origin is 0 0 (top-left of the zoom layer at default 1x =
+// top-left of the container) so all math works in container-pixel
+// coords without anchor offset surprises.
+//
+// Active pointers are tracked in a Map keyed by pointerId. With 1
+// active pointer we pan; with 2 we pinch (scale anchored to the
+// midpoint of the two fingers). On pointerup if total movement was
+// small we let the click-on-marker through (we never call
+// preventDefault on small interactions).
+
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 4;
+const TAP_THRESHOLD_PX = 8;        // <= this distance: counts as a tap, not a drag
+const DOUBLE_TAP_MS = 300;         // ms window for second tap
+const DOUBLE_TAP_DIST = 30;        // px window for second tap location
+
+function attachZoomPan(containerEl) {
+  const zoomEl = containerEl.querySelector('.map-zoom');
+  const resetBtn = containerEl.querySelector('.map-reset-btn');
+  if (!zoomEl) return;
+
+  // Per-container zoom/pan state
+  const z = { scale: 1, tx: 0, ty: 0 };
+
+  // Active pointers: pointerId → { x, y, startX, startY }
+  const active = new Map();
+
+  // Pinch baseline: distance + midpoint at the moment second finger went down
+  let pinchStartDist = 0;
+  let pinchStartScale = 1;
+  let pinchStartTx = 0;
+  let pinchStartTy = 0;
+  let pinchStartMidX = 0;
+  let pinchStartMidY = 0;
+
+  // Single-pointer pan baseline
+  let panStartTx = 0;
+  let panStartTy = 0;
+  let panStartX = 0;
+  let panStartY = 0;
+  let panTotalDist = 0;
+
+  // Double-tap tracking
+  let lastTapTime = 0;
+  let lastTapX = 0, lastTapY = 0;
+
+  function applyTransform(animate = false) {
+    if (animate) zoomEl.classList.add('animating');
+    else zoomEl.classList.remove('animating');
+    zoomEl.style.transform = `translate(${z.tx}px, ${z.ty}px) scale(${z.scale})`;
+    containerEl.classList.toggle('zoomed', z.scale > 1.01);
+  }
+
+  // Clamp translation so the image never shows empty container space
+  // at the edges. With transform-origin 0 0 and scale s, the zoom layer
+  // covers an area of (W*s × H*s) starting at (tx,ty). For the image to
+  // always fill the container [0..W, 0..H]:
+  //   tx must be in [W - W*s, 0]   i.e. [W(1-s), 0]
+  //   ty must be in [H - H*s, 0]   i.e. [H(1-s), 0]
+  // At scale=1 both ranges collapse to [0,0] → zoom resets to identity.
+  function clampTranslate() {
+    const W = containerEl.clientWidth;
+    const H = containerEl.clientHeight;
+    const minTx = W * (1 - z.scale);
+    const minTy = H * (1 - z.scale);
+    if (z.tx > 0)     z.tx = 0;
+    if (z.tx < minTx) z.tx = minTx;
+    if (z.ty > 0)     z.ty = 0;
+    if (z.ty < minTy) z.ty = minTy;
+  }
+
+  function reset(animate = true) {
+    z.scale = 1; z.tx = 0; z.ty = 0;
+    applyTransform(animate);
+  }
+
+  // Get pointer coords relative to the container (0,0 = top-left)
+  function localXY(ev) {
+    const rect = containerEl.getBoundingClientRect();
+    return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
+  }
+
+  function onPointerDown(ev) {
+    // Don't capture button taps (the reset button has its own handler)
+    if (ev.target.closest('.map-reset-btn')) return;
+    try { containerEl.setPointerCapture(ev.pointerId); } catch (_) {}
+    const p = localXY(ev);
+    active.set(ev.pointerId, { x: p.x, y: p.y, startX: p.x, startY: p.y });
+
+    if (active.size === 1) {
+      // Begin a potential pan
+      panStartTx = z.tx; panStartTy = z.ty;
+      panStartX = p.x;   panStartY = p.y;
+      panTotalDist = 0;
+    } else if (active.size === 2) {
+      // Begin a pinch — record baseline distance and midpoint
+      const pts = Array.from(active.values());
+      const dx = pts[1].x - pts[0].x;
+      const dy = pts[1].y - pts[0].y;
+      pinchStartDist = Math.hypot(dx, dy) || 1;
+      pinchStartScale = z.scale;
+      pinchStartTx = z.tx; pinchStartTy = z.ty;
+      pinchStartMidX = (pts[0].x + pts[1].x) / 2;
+      pinchStartMidY = (pts[0].y + pts[1].y) / 2;
+    }
+  }
+
+  function onPointerMove(ev) {
+    if (!active.has(ev.pointerId)) return;
+    const p = localXY(ev);
+    const prev = active.get(ev.pointerId);
+    active.set(ev.pointerId, { ...prev, x: p.x, y: p.y });
+
+    if (active.size === 2) {
+      // Two-finger pinch: scale anchored at the original midpoint so the
+      // map content under the midpoint stays put.
+      const pts = Array.from(active.values());
+      const dx = pts[1].x - pts[0].x;
+      const dy = pts[1].y - pts[0].y;
+      const dist = Math.hypot(dx, dy) || 1;
+      let newScale = pinchStartScale * (dist / pinchStartDist);
+      if (newScale < ZOOM_MIN) newScale = ZOOM_MIN;
+      if (newScale > ZOOM_MAX) newScale = ZOOM_MAX;
+
+      // To keep the content under (pinchStartMidX, pinchStartMidY) fixed
+      // when scaling around origin (0,0): the map-pixel under the midpoint
+      // before scale is at ((midX - tx0) / scale0). After scale we want
+      // that same map-pixel at midX, so:
+      //   midX = newTx + ((midX - pinchStartTx) / pinchStartScale) * newScale
+      //   ⇒ newTx = midX - ((midX - pinchStartTx) / pinchStartScale) * newScale
+      z.tx = pinchStartMidX - ((pinchStartMidX - pinchStartTx) / pinchStartScale) * newScale;
+      z.ty = pinchStartMidY - ((pinchStartMidY - pinchStartTy) / pinchStartScale) * newScale;
+      z.scale = newScale;
+      clampTranslate();
+      applyTransform(false);
+      ev.preventDefault();
+    } else if (active.size === 1) {
+      // One-finger pan — only meaningful when zoomed in
+      if (z.scale <= 1.01) {
+        // Track motion for tap-vs-drag distinction but don't translate
+        panTotalDist += Math.hypot(p.x - prev.x, p.y - prev.y);
+        return;
+      }
+      const dx = p.x - panStartX;
+      const dy = p.y - panStartY;
+      panTotalDist = Math.hypot(dx, dy);
+      z.tx = panStartTx + dx;
+      z.ty = panStartTy + dy;
+      clampTranslate();
+      applyTransform(false);
+      ev.preventDefault();
+    }
+  }
+
+  function onPointerUp(ev) {
+    if (!active.has(ev.pointerId)) return;
+    const wasOnePointer = active.size === 1;
+    const p = active.get(ev.pointerId);
+    active.delete(ev.pointerId);
+    try { containerEl.releasePointerCapture(ev.pointerId); } catch (_) {}
+
+    // Double-tap-to-reset detection: only when the gesture was a tap
+    // (small total movement) on a single pointer
+    if (wasOnePointer && panTotalDist <= TAP_THRESHOLD_PX) {
+      const now = Date.now();
+      if (now - lastTapTime < DOUBLE_TAP_MS &&
+          Math.hypot(p.x - lastTapX, p.y - lastTapY) < DOUBLE_TAP_DIST) {
+        // Second tap → reset
+        if (z.scale > 1.01) {
+          ev.preventDefault();
+          reset(true);
+          lastTapTime = 0;  // consume so triple-tap doesn't loop
+          return;
+        }
+      }
+      lastTapTime = now;
+      lastTapX = p.x; lastTapY = p.y;
+      // Let the original click on a marker bubble naturally — don't preventDefault
+      return;
+    }
+
+    // Drag end (significant movement) — suppress any click that follows
+    if (panTotalDist > TAP_THRESHOLD_PX) {
+      ev.preventDefault();
+    }
+  }
+
+  function onPointerCancel(ev) {
+    active.delete(ev.pointerId);
+    try { containerEl.releasePointerCapture(ev.pointerId); } catch (_) {}
+  }
+
+  // Mouse-wheel zoom for desktop convenience (centered on cursor)
+  function onWheel(ev) {
+    ev.preventDefault();
+    const p = localXY(ev);
+    const factor = ev.deltaY < 0 ? 1.15 : (1 / 1.15);
+    let newScale = z.scale * factor;
+    if (newScale < ZOOM_MIN) newScale = ZOOM_MIN;
+    if (newScale > ZOOM_MAX) newScale = ZOOM_MAX;
+    // Same anchor math as pinch
+    z.tx = p.x - ((p.x - z.tx) / z.scale) * newScale;
+    z.ty = p.y - ((p.y - z.ty) / z.scale) * newScale;
+    z.scale = newScale;
+    clampTranslate();
+    applyTransform(false);
+  }
+
+  containerEl.addEventListener('pointerdown',   onPointerDown);
+  containerEl.addEventListener('pointermove',   onPointerMove);
+  containerEl.addEventListener('pointerup',     onPointerUp);
+  containerEl.addEventListener('pointercancel', onPointerCancel);
+  containerEl.addEventListener('wheel',         onWheel, { passive: false });
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      reset(true);
+    });
+  }
+}
+
+function setupZoomPan() {
+  ['lw', 'dw', 'sm'].forEach((key) => {
+    const c = document.getElementById('map-' + key);
+    if (c) attachZoomPan(c);
+  });
+}
+
 /* ---------- Init ---------- */
 
 function init() {
@@ -1016,6 +1262,7 @@ function init() {
   setupSubTabs();
   setupReset();
   setupSettings();
+  setupZoomPan();
   rerenderAll();
 }
 
