@@ -1840,8 +1840,14 @@ const Z3_TRACKER_GROUPS = {
 
   // ---- LW NE single-name groups ----
   'lw-king-zora':         { region: z3CanEnterLWNorthEast, names: ['King Zora'] },
-  'lw-zora':              { region: z3CanEnterLWNorthEast, names: ["Zora's Ledge"] },
-  'lw-waterfall-fairy':   { region: z3CanEnterLWNorthEast, names: ['Waterfall Fairy - Left', 'Waterfall Fairy - Right'] },
+  // Zora's Ledge: fake-flipper (water-walk glitch) reaches it without any items.
+  'lw-zora':              { region: z3CanEnterLWNorthEast, names: ["Zora's Ledge"],
+                            hardIf: (_i, _st) => true },
+  // Waterfall Fairy: fake-flipper / water-walk reaches with Boots OR Moon Pearl
+  // (Moon Pearl is needed to maintain Link's form during the water-walk; Boots
+  // give the dash-into-water momentum trick).
+  'lw-waterfall-fairy':   { region: z3CanEnterLWNorthEast, names: ['Waterfall Fairy - Left', 'Waterfall Fairy - Right'],
+                            hardIf: (i, _st) => has(i, 'boots') || has(i, 'moonpearl') },
   'lw-potion-shop':       { region: z3CanEnterLWNorthEast, names: ['Potion Shop'] },
   'lw-sahasrahla-hut':    { region: z3CanEnterLWNorthEast, names: ["Sahasrahla's Hut - Left", "Sahasrahla's Hut - Middle", "Sahasrahla's Hut - Right"] },
   'lw-sahasrahla-reward': { region: z3CanEnterLWNorthEast, names: ['Sahasrahla'] },
@@ -1879,12 +1885,22 @@ const Z3_TRACKER_GROUPS = {
                             'Mini Moldorm Cave - Far Right'] },
   'lw-desert-ledge':      { region: z3CanEnterLWSouth, names: ['Desert Ledge'] },
   'lw-checkerboard':      { region: z3CanEnterLWSouth, names: ['Checkerboard Cave'] },
+  // Bombos Tablet — Book in your inventory technically lets you "read" the
+  // tablet text, but you can't claim the item without Master Sword + Mirror
+  // + DW South. Tightened from "just Book" to "Book + Mirror + DW South"
+  // so VISIBLE means "one item away" rather than "merely identifiable."
   'lw-bombos-tablet':     { region: z3CanEnterLWSouth, names: ['Bombos Tablet'],
-                            visibleIf: (i,_st) => has(i, 'book') },
+                            visibleIf: (i, st) => has(i, 'book') && has(i, 'mirror') &&
+                                                  z3CanEnterDWSouth(i, st) },
   'lw-floodgate':         { region: z3CanEnterLWSouth, names: ['Floodgate Chest'] },
   'lw-sunken-treasure':   { region: z3CanEnterLWSouth, names: ['Sunken Treasure'] },
-  'lw-lake-hylia-island': { region: z3CanEnterLWSouth, names: ['Lake Hylia Island'] },
-  'lw-hobo':              { region: z3CanEnterLWSouth, names: ['Hobo'] },
+  // Lake Hylia Island — visible from across the water with no items
+  // ("you can see the island, you just can't reach it yet").
+  'lw-lake-hylia-island': { region: z3CanEnterLWSouth, names: ['Lake Hylia Island'],
+                            visibleIf: (_i, _st) => true },
+  // Hobo (under bridge) — fake-flipper / water-walk reaches with no items.
+  'lw-hobo':              { region: z3CanEnterLWSouth, names: ['Hobo'],
+                            hardIf: (_i, _st) => true },
   'lw-ice-rod-cave':      { region: z3CanEnterLWSouth, names: ['Ice Rod Cave'] },
 
   // Sanctuary-area / HC overworld pickups (NotInDungeon flagged in source)
@@ -1948,6 +1964,8 @@ function z3OverworldCheck(id, items, st) {
   if (!group) return STATE.UNAVAIL;
   // Region entry
   if (!group.region(items, st)) {
+    // Hard-logic reachable from outside the normal region?
+    if (group.hardIf && group.hardIf(items, st)) return STATE.GLITCHED;
     // Visible?
     if (group.visibleIf && group.visibleIf(items, st)) return STATE.VISIBLE;
     return STATE.UNAVAIL;
@@ -1961,7 +1979,9 @@ function z3OverworldCheck(id, items, st) {
   }
   if (reachable === group.names.length) return STATE.AVAILABLE;
   if (reachable > 0) return STATE.PARTIAL;
-  // No chests reachable yet — show VISIBLE if we have a peek hint
+  // No chests reachable yet — try Hard-logic alternate first (yellow),
+  // then Visible (peek hint), then UNAVAIL.
+  if (group.hardIf && group.hardIf(items, st)) return STATE.GLITCHED;
   if (group.visibleIf && group.visibleIf(items, st)) return STATE.VISIBLE;
   return STATE.UNAVAIL;
 }
@@ -2106,29 +2126,38 @@ function _dungeonMedallionMet(st, dungId, i) {
 // the items needed to clear the boss.
 // =====================================================================
 
-// EP — Boss (Armos Knights): BigKey (assumed) + Bow + Lamp
+// EP — 3 random-item locations: Cannonball Chest, Big Chest, and the Boss
+// (Armos Knights) drop. The first two need only the dungeon's small/big
+// keys (assumed satisfied since we don't track per-dungeon keys), but the
+// boss drop genuinely requires Bow + Lantern. So when neither/either is
+// missing, only 2/3 chests are reachable; with both, all 3 are.
 function z3DungeonEP(i) {
-  const boss = (anyBow(i) && has(i, 'lantern')) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  return { chestsReachable: 3, boss };
+  const canBeatBoss = anyBow(i) && has(i, 'lantern');
+  const boss = canBeatBoss ? STATE.AVAILABLE : STATE.UNAVAIL;
+  return { chestsReachable: canBeatBoss ? 3 : 2, boss };
 }
 
-// DP — Boss (Lanmolas): (LiftLight OR Mire+Mirror) + canLightTorches + canBeatBoss
+// DP — 2 random-item locations: Big Chest, Lanmolas (boss).
+// Boss needs ((LiftLight OR (Mire portal + Mirror)) + canLightTorches + weapon).
 function z3DungeonDP(i) {
   const lanmolasReach = canLiftLight(i) || (_canAccessMiseryMirePortalZ3(i) && has(i, 'mirror'));
   const canBeat = (i.sword || 0) >= 1 || has(i, 'hammer') || anyBow(i) ||
                   has(i, 'firerod') || has(i, 'icerod') || has(i, 'byrna') || has(i, 'somaria');
-  const boss = (lanmolasReach && canLightTorches(i) && canBeat) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  return { chestsReachable: 2, boss };
+  const canBeatBoss = lanmolasReach && canLightTorches(i) && canBeat;
+  const boss = canBeatBoss ? STATE.AVAILABLE : STATE.UNAVAIL;
+  return { chestsReachable: canBeatBoss ? 2 : 1, boss };
 }
 
-// ToH — Boss (Moldorm): BigKey (assumed) + (sword OR hammer)
+// ToH — 2 locations: Big Chest, Moldorm. Boss needs sword OR hammer.
 function z3DungeonTOH(i) {
-  const boss = ((i.sword || 0) >= 1 || has(i, 'hammer')) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  return { chestsReachable: 2, boss };
+  const canBeatBoss = (i.sword || 0) >= 1 || has(i, 'hammer');
+  const boss = canBeatBoss ? STATE.AVAILABLE : STATE.UNAVAIL;
+  return { chestsReachable: canBeatBoss ? 2 : 1, boss };
 }
 
-// HC — no boss; the escape sequence is auto-handled, so we report boss as
-// AVAILABLE so the cell renders consistently. 6 random-item locations.
+// HC — no real boss drop; the 6 random-item locations don't depend on
+// any single item gate beyond entry. Report all 6 reachable on entry,
+// and report boss as AVAILABLE so the cell renders cleanly.
 function z3DungeonHC(_i) {
   return { chestsReachable: 6, boss: STATE.AVAILABLE };
 }
@@ -2139,55 +2168,63 @@ function z3DungeonAT(i) {
   return { chestsReachable: 0, boss };
 }
 
-// PoD — Boss (Helmasaur King): Lamp + Hammer + Bow
+// PoD — 5 locations: 4 chests + Helmasaur boss. Boss needs Lamp + Hammer + Bow.
 function z3DungeonPOD(i) {
-  const boss = (has(i, 'lantern') && has(i, 'hammer') && anyBow(i)) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  return { chestsReachable: 5, boss };
+  const canBeatBoss = has(i, 'lantern') && has(i, 'hammer') && anyBow(i);
+  const boss = canBeatBoss ? STATE.AVAILABLE : STATE.UNAVAIL;
+  return { chestsReachable: canBeatBoss ? 5 : 4, boss };
 }
 
-// SP — Boss (Arrghus): Hammer + Hookshot
+// SP — 6 locations: 5 chests + Arrghus boss. Boss needs Hammer + Hookshot.
 function z3DungeonSP(i) {
-  const boss = (has(i, 'hammer') && has(i, 'hookshot')) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  return { chestsReachable: 6, boss };
+  const canBeatBoss = has(i, 'hammer') && has(i, 'hookshot');
+  const boss = canBeatBoss ? STATE.AVAILABLE : STATE.UNAVAIL;
+  return { chestsReachable: canBeatBoss ? 6 : 5, boss };
 }
 
-// SW — Boss (Mothula): Fire Rod + Sword
+// SW — 2 locations: Big Chest + Mothula. Boss needs Fire Rod + Sword.
 function z3DungeonSW(i) {
-  const boss = (has(i, 'firerod') && (i.sword || 0) >= 1) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  return { chestsReachable: 2, boss };
+  const canBeatBoss = has(i, 'firerod') && (i.sword || 0) >= 1;
+  const boss = canBeatBoss ? STATE.AVAILABLE : STATE.UNAVAIL;
+  return { chestsReachable: canBeatBoss ? 2 : 1, boss };
 }
 
-// TT — Boss (Blind): BigKey (assumed) + (sword OR hammer OR somaria OR byrna)
+// TT — 4 locations: 3 chests + Blind. Boss needs (sword OR hammer OR somaria OR byrna).
 function z3DungeonTT(i) {
-  const boss = ((i.sword || 0) >= 1 || has(i, 'hammer') ||
-                has(i, 'somaria') || has(i, 'byrna')) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  return { chestsReachable: 4, boss };
+  const canBeatBoss = (i.sword || 0) >= 1 || has(i, 'hammer') ||
+                      has(i, 'somaria') || has(i, 'byrna');
+  const boss = canBeatBoss ? STATE.AVAILABLE : STATE.UNAVAIL;
+  return { chestsReachable: canBeatBoss ? 4 : 3, boss };
 }
 
-// IP — Boss (Kholdstare): Hammer + LiftLight (BigKey + Keys assumed)
+// IP — 3 locations: Big Chest, Iced T, Kholdstare. Boss needs Hammer + LiftLight.
 function z3DungeonIP(i) {
-  const boss = (has(i, 'hammer') && canLiftLight(i)) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  return { chestsReachable: 3, boss };
+  const canBeatBoss = has(i, 'hammer') && canLiftLight(i);
+  const boss = canBeatBoss ? STATE.AVAILABLE : STATE.UNAVAIL;
+  return { chestsReachable: canBeatBoss ? 3 : 2, boss };
 }
 
-// MM — Boss (Vitreous): Lamp + Somaria (BigKey assumed)
+// MM — 2 locations: Big Chest + Vitreous. Boss needs Lamp + Somaria.
 function z3DungeonMM(i) {
-  const boss = (has(i, 'lantern') && has(i, 'somaria')) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  return { chestsReachable: 2, boss };
+  const canBeatBoss = has(i, 'lantern') && has(i, 'somaria');
+  const boss = canBeatBoss ? STATE.AVAILABLE : STATE.UNAVAIL;
+  return { chestsReachable: canBeatBoss ? 2 : 1, boss };
 }
 
-// TR — Boss (Trinexx): Lamp + Fire Rod + Ice Rod (BigKey + Keys assumed)
+// TR — 5 locations: 4 chests + Trinexx. Boss needs Lamp + Fire Rod + Ice Rod.
 function z3DungeonTR(i) {
-  const boss = (has(i, 'lantern') && has(i, 'firerod') && has(i, 'icerod')) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  return { chestsReachable: 5, boss };
+  const canBeatBoss = has(i, 'lantern') && has(i, 'firerod') && has(i, 'icerod');
+  const boss = canBeatBoss ? STATE.AVAILABLE : STATE.UNAVAIL;
+  return { chestsReachable: canBeatBoss ? 5 : 4, boss };
 }
 
-// GT — Boss (Moldorm at top): Bow + canLightTorches + Hookshot + (sword OR hammer)
+// GT — 20 locations including the Moldorm-2 boss at the top.
+// Boss needs Bow + canLightTorches + Hookshot + (Sword OR Hammer).
 function z3DungeonGT(i) {
   const canBeatMoldorm = (i.sword || 0) >= 1 || has(i, 'hammer');
-  const boss = (anyBow(i) && canLightTorches(i) && has(i, 'hookshot') && canBeatMoldorm)
-               ? STATE.AVAILABLE : STATE.UNAVAIL;
-  return { chestsReachable: 20, boss };
+  const canBeatBoss = anyBow(i) && canLightTorches(i) && has(i, 'hookshot') && canBeatMoldorm;
+  const boss = canBeatBoss ? STATE.AVAILABLE : STATE.UNAVAIL;
+  return { chestsReachable: canBeatBoss ? 20 : 19, boss };
 }
 
 // ===========================================================
