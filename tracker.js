@@ -156,6 +156,13 @@ function defaultState() {
 
 /* ---------- State mgmt ---------- */
 
+// Bumping STATE_SCHEMA_VERSION triggers a one-time migration on next load
+// for users with older saved state. We use it sparingly — only when the
+// shape of saved data changes meaningfully (e.g. v20 changed every
+// dungeon's totalChests, so any saved s.chests value was stale). We do
+// NOT bump this for cosmetic changes; only for data-shape changes.
+const STATE_SCHEMA_VERSION = 2;
+
 let state = loadState();
 
 function loadState() {
@@ -163,26 +170,43 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultState();
     const parsed = JSON.parse(raw);
+    const savedSchema = parsed.schemaVersion || 1;
     // merge with defaults in case new items were added across versions
     const def = defaultState();
-    return {
+    const merged = {
       items:    { ...def.items, ...parsed.items },
-      dungeons: mergeDungeons(def.dungeons, parsed.dungeons || {}),
+      dungeons: mergeDungeons(def.dungeons, parsed.dungeons || {}, savedSchema),
       checked:  parsed.checked || {},
       smBossPrizes: parsed.smBossPrizes || {},
       settings: { ...def.settings, ...(parsed.settings || {}) },
+      schemaVersion: STATE_SCHEMA_VERSION,
       v: 1,
     };
+    return merged;
   } catch (e) {
     console.warn('State load failed, resetting:', e);
     return defaultState();
   }
 }
 
-function mergeDungeons(defD, savedD) {
+function mergeDungeons(defD, savedD, savedSchema) {
   const out = {};
   Object.keys(defD).forEach(id => {
     out[id] = { ...defD[id], ...(savedD[id] || {}) };
+    const total = (LOGIC.DUNGEONS[id] && LOGIC.DUNGEONS[id].totalChests) || 0;
+    // Schema v1 → v2 migration (v24 release): the v20 port redid every
+    // dungeon's chest counts to match the canonical SMZ3 source. Any
+    // saved s.chests from before is stale and either too high or too
+    // low. Reset chest counters to the new full total; boss / prize /
+    // medallion state is preserved (user keeps their tracking work,
+    // just re-counts chests on next playthrough).
+    if (savedSchema < 2) {
+      out[id].chests = total;
+    }
+    // Defensive bounds even within schema (e.g. negative or NaN values)
+    if (typeof out[id].chests !== 'number' || out[id].chests > total || out[id].chests < 0) {
+      out[id].chests = total;
+    }
   });
   return out;
 }
