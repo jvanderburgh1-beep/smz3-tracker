@@ -223,14 +223,19 @@ function itemImgSrc(it, v) {
 
 function renderItemGrid(hostId, catalog, isBoss = false) {
   const host = document.getElementById(hostId);
-  host.innerHTML = '';
+  if (!host) return;  // grid not in DOM (e.g. removed from a tab)
+  // Build into a fragment first so the DOM only sees one insertion, not
+  // one per item. Without this, each appendChild triggers a layout pass
+  // and the grid briefly visually reflows as items pop in. Most visible
+  // on SM items because that grid is further down the page.
+  const frag = document.createDocumentFragment();
   catalog.forEach(it => {
     // Spacer cell: holds a grid slot but isn't interactive.
     if (it.kind === 'spacer') {
       const sp = document.createElement('div');
       sp.className = 'item spacer';
       sp.setAttribute('aria-hidden', 'true');
-      host.appendChild(sp);
+      frag.appendChild(sp);
       return;
     }
 
@@ -258,7 +263,11 @@ function renderItemGrid(hostId, catalog, isBoss = false) {
       img.src = src;
       img.alt = it.label;
       img.draggable = false;
-      img.loading = 'lazy';
+      // No loading="lazy" — these items are tiny and all in the initial
+      // viewport. Lazy decoding caused a visible 0-size flash whenever
+      // rerenderAll() destroyed and recreated the grid (most visible on
+      // SM items because they're further down the page). Eager loading
+      // means the browser uses its cached copy synchronously.
       img.addEventListener('error', () => {
         // Swap in the text fallback in-place
         img.remove();
@@ -293,8 +302,10 @@ function renderItemGrid(hostId, catalog, isBoss = false) {
       rerenderAll();
     });
 
-    host.appendChild(el);
+    frag.appendChild(el);
   });
+  // Single replacement of the whole grid — one layout pass.
+  host.replaceChildren(frag);
 }
 
 /* ---------- Rendering: dungeons ---------- */
@@ -933,7 +944,8 @@ function rerenderAll() {
   if (LOGIC.setRuntimeState) LOGIC.setRuntimeState(state);
 
   renderItemGrid('z3-items',    Z3_ITEMS);
-  renderItemGrid('sm-bosses',   SM_BOSSES, true);
+  // SM bosses moved to Dungeons tab only — used to live on the Items tab
+  // too, which was redundant since renderSMBossGrid() already covers them.
   renderItemGrid('sm-items',    SM_ITEMS);
   renderDungeons();
   renderSMBossGrid();
