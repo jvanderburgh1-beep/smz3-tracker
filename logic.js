@@ -2084,234 +2084,110 @@ function _dungeonMedallionMet(st, dungId, i) {
 //
 // These functions assume entry has already been verified.
 
-// Eastern Palace chests:
-//   Cannonball, Map, Compass: unconditional
-//   Big Chest: BigKey  (assumed met)
-//   Big Key: Lamp
-//   Boss (Armos Knights): BigKey + Bow + Lamp
+// =====================================================================
+// Dungeon chest counters — "Option A" model (v26).
+//
+// We track the number of *unique random-item locations* in each dungeon,
+// which is the items-tracker / streamer convention: map / compass / small-
+// key / big-key chests are excluded because in non-keysanity those slots
+// always hold their own non-random tracking items. The user manually
+// decrements the counter as they collect items.
+//
+// Each helper returns:
+//   { chestsReachable: <total>, boss: <state> }
+// where chestsReachable is the dungeon's totalChests constant — the model
+// is "if you can enter, you can find all N items as you progress through
+// the dungeon normally, treating small/big keys as findable in order."
+// The previous more-granular per-item gating produced inflated counts
+// because many of the gated locations were map/compass/key chests.
+//
+// Boss state is still computed item-by-item per the canonical source so
+// the boss square (top-right) lights up correctly when the player has
+// the items needed to clear the boss.
+// =====================================================================
+
+// EP — Boss (Armos Knights): BigKey (assumed) + Bow + Lamp
 function z3DungeonEP(i) {
-  let n = 4; // cannonball + map + compass + big chest (BK assumed)
-  if (has(i, 'lantern')) n += 1; // Big Key Chest
   const boss = (anyBow(i) && has(i, 'lantern')) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  if (boss === STATE.AVAILABLE) n += 1; // boss heart container counts as a chest
-  return { chestsReachable: n, boss };
+  return { chestsReachable: 3, boss };
 }
 
-// Desert Palace chests:
-//   Big Chest: BigKey (assumed)
-//   Torch: Boots
-//   Map, Compass, Big Key: unconditional/key-gated (assumed)
-//   Boss (Lanmolas): (LiftLight OR (MiseryMirePortal+Mirror)) + canLightTorches + canBeatBoss
-//   canBeatBoss = sword OR hammer OR bow OR firerod OR icerod OR byrna OR somaria
+// DP — Boss (Lanmolas): (LiftLight OR Mire+Mirror) + canLightTorches + canBeatBoss
 function z3DungeonDP(i) {
-  let n = 1; // big chest
-  if (has(i, 'boots')) n += 1; // torch
-  n += 3; // map, compass, big key (key-gated, assumed met)
   const lanmolasReach = canLiftLight(i) || (_canAccessMiseryMirePortalZ3(i) && has(i, 'mirror'));
   const canBeat = (i.sword || 0) >= 1 || has(i, 'hammer') || anyBow(i) ||
                   has(i, 'firerod') || has(i, 'icerod') || has(i, 'byrna') || has(i, 'somaria');
   const boss = (lanmolasReach && canLightTorches(i) && canBeat) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  if (boss === STATE.AVAILABLE) n += 1;
-  return { chestsReachable: n, boss };
+  return { chestsReachable: 2, boss };
 }
 
-// Tower of Hera chests:
-//   Basement Cage: unconditional
-//   Map: unconditional
-//   Big Key: canLightTorches (key assumed)
-//   Big Chest, Compass: BigKey (assumed)
-//   Boss (Moldorm): BigKey + (sword OR hammer)
+// ToH — Boss (Moldorm): BigKey (assumed) + (sword OR hammer)
 function z3DungeonTOH(i) {
-  let n = 2; // basement cage + map
-  if (canLightTorches(i)) n += 1; // big key chest
-  n += 2; // big chest + compass (BK assumed)
   const boss = ((i.sword || 0) >= 1 || has(i, 'hammer')) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  if (boss === STATE.AVAILABLE) n += 1;
-  return { chestsReachable: n, boss };
+  return { chestsReachable: 2, boss };
 }
 
-// Hyrule Castle chests (Sewers + HC):
-//   Sanctuary: unconditional
-//   Sewers Secret Room (3 chests): LiftLight OR (Lamp + Key)
-//   Sewers Dark Cross: Lamp
-//   HC Map: unconditional
-//   HC Boomerang Chest: Key (assumed)
-//   HC Zelda's Cell: Key (assumed)
-//   Link's Uncle: unconditional
-//   Secret Passage: unconditional
-//   No boss in HC (collapsed under at)
-function z3DungeonHC(i) {
-  let n = 1; // sanctuary
-  if (canLiftLight(i) || has(i, 'lantern')) n += 3; // sewers secret room (3 chests)
-  if (has(i, 'lantern')) n += 1; // dark cross
-  n += 1; // map
-  n += 2; // boomerang + zelda's cell (key assumed)
-  // Link's Uncle and Secret Passage are tracked separately as overworld
-  return { chestsReachable: n, boss: STATE.AVAILABLE }; // HC has no real boss
+// HC — no boss; the escape sequence is auto-handled, so we report boss as
+// AVAILABLE so the cell renders consistently. 6 random-item locations.
+function z3DungeonHC(_i) {
+  return { chestsReachable: 6, boss: STATE.AVAILABLE };
 }
 
-// Castle Tower (boss-only for tracking):
-//   Foyer and Dark Maze chests exist in the randomizer but are rarely
-//   tracked — the important state is "have you beaten Agahnim?" which
-//   is the boss flag. Report 0 chests; the tracker.js code hides the
-//   chest row when totalChests === 0.
-//   Boss (Agahnim): Lamp + 2 Keys (assumed) + Sword
+// AT — boss-only (Castle Tower); see registry totalChests: 0
 function z3DungeonAT(i) {
   const boss = (has(i, 'lantern') && (i.sword || 0) >= 1) ? STATE.AVAILABLE : STATE.UNAVAIL;
   return { chestsReachable: 0, boss };
 }
 
-// Palace of Darkness:
-//   Many chests gate on Bow, Hammer, Lamp, Keys.
-//   Without per-key tracking we approximate: assume keys are met,
-//   so chest counts depend only on item gates.
+// PoD — Boss (Helmasaur King): Lamp + Hammer + Bow
 function z3DungeonPOD(i) {
-  let n = 1; // shooter room (unconditional)
-  if (anyBow(i) || (anyBow(i) && has(i, 'hammer'))) {} // ignore — covered below
-  if (anyBow(i)) n += 2; // arena ledge + map chest
-  // Stalfos basement & arena bridge: keys assumed → if you have entry you reach them
-  n += 2;
-  // Compass chest, big key chest, harmless hellway, dark basement L/R, dark maze T/B, big chest:
-  // Most need Lamp + various keys. Assume keys met.
-  // Dark basement L/R + big chest + dark maze T/B: need Lamp.
-  if (has(i, 'lantern')) n += 5;
-  // Compass + big key + harmless hellway: key-gated, no item gate beyond keys
-  n += 3;
-  // Boss (Helmasaur King): Lamp + Hammer + Bow + BigKey + 6 Keys
   const boss = (has(i, 'lantern') && has(i, 'hammer') && anyBow(i)) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  if (boss === STATE.AVAILABLE) n += 1;
-  return { chestsReachable: n, boss };
+  return { chestsReachable: 5, boss };
 }
 
-// Swamp Palace:
-//   Entrance: unconditional
-//   Map: 1 key (assumed)
-//   Compass / West / Big Key / Big Chest: Hammer (+ keys assumed)
-//   Flooded Room L/R / Waterfall / Boss: Hammer + Hookshot
+// SP — Boss (Arrghus): Hammer + Hookshot
 function z3DungeonSP(i) {
-  let n = 2; // entrance + map
-  if (has(i, 'hammer')) n += 4; // compass, west, big key, big chest
-  if (has(i, 'hammer') && has(i, 'hookshot')) {
-    n += 3; // flooded L, flooded R, waterfall
-  }
   const boss = (has(i, 'hammer') && has(i, 'hookshot')) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  if (boss === STATE.AVAILABLE) n += 1;
-  return { chestsReachable: n, boss };
+  return { chestsReachable: 6, boss };
 }
 
-// Skull Woods:
-//   Pot Prison, Compass, Map, Pinball, Big Key: unconditional/key-gated
-//   Big Chest: BigKey (assumed)
-//   Bridge Room: Fire Rod
-//   Boss (Mothula): Fire Rod + Sword + 3 Keys
+// SW — Boss (Mothula): Fire Rod + Sword
 function z3DungeonSW(i) {
-  let n = 5; // pot prison, compass, map, pinball, big key
-  n += 1; // big chest (BK assumed)
-  if (has(i, 'firerod')) n += 1; // bridge room
   const boss = (has(i, 'firerod') && (i.sword || 0) >= 1) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  if (boss === STATE.AVAILABLE) n += 1;
-  return { chestsReachable: n, boss };
+  return { chestsReachable: 2, boss };
 }
 
-// Thieves' Town:
-//   Map, Ambush, Compass, Big Key: unconditional
-//   Attic, Blind's Cell, Big Chest: BigKey (assumed)
-//   Boss (Blind): BigKey + Key (assumed) + (sword OR hammer OR somaria OR byrna)
+// TT — Boss (Blind): BigKey (assumed) + (sword OR hammer OR somaria OR byrna)
 function z3DungeonTT(i) {
-  let n = 4 + 3; // 4 always + 3 BK-gated (assumed met)
-  // Big chest also needs Hammer
-  if (!has(i, 'hammer')) n -= 1;
   const boss = ((i.sword || 0) >= 1 || has(i, 'hammer') ||
                 has(i, 'somaria') || has(i, 'byrna')) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  if (boss === STATE.AVAILABLE) n += 1;
-  return { chestsReachable: n, boss };
+  return { chestsReachable: 4, boss };
 }
 
-// Ice Palace:
-//   Compass, Spike Room, Iced T, Freezor: unconditional
-//   Map, Big Key: Hammer + LiftLight (key-gated, assumed)
-//   Big Chest: BigKey (assumed)
-//   Boss (Kholdstare): BigKey + Hammer + LiftLight + 1-2 Keys (assumed)
+// IP — Boss (Kholdstare): Hammer + LiftLight (BigKey + Keys assumed)
 function z3DungeonIP(i) {
-  let n = 4; // compass, spike, iced T, freezor
-  if (has(i, 'hammer') && canLiftLight(i)) n += 2; // map, big key
-  n += 1; // big chest (BK assumed)
   const boss = (has(i, 'hammer') && canLiftLight(i)) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  if (boss === STATE.AVAILABLE) n += 1;
-  return { chestsReachable: n, boss };
+  return { chestsReachable: 3, boss };
 }
 
-// Misery Mire:
-//   Main Lobby, Map: BigKey or 1 Key (assumed)
-//   Bridge, Spike Chest: unconditional
-//   Compass, Big Key: canLightTorches + Keys (assumed)
-//   Big Chest: BigKey (assumed)
-//   Boss (Vitreous): BigKey + Lamp + Somaria
+// MM — Boss (Vitreous): Lamp + Somaria (BigKey assumed)
 function z3DungeonMM(i) {
-  let n = 4; // main lobby, map (key assumed), bridge, spike
-  if (canLightTorches(i)) n += 2; // compass, big key
-  n += 1; // big chest (BK assumed)
   const boss = (has(i, 'lantern') && has(i, 'somaria')) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  if (boss === STATE.AVAILABLE) n += 1;
-  return { chestsReachable: n, boss };
+  return { chestsReachable: 2, boss };
 }
 
-// Turtle Rock:
-//   Compass: unconditional
-//   Roller Room L/R: Fire Rod
-//   Chain Chomps: 1 Key (assumed)
-//   Big Key Chest: Keys (assumed)
-//   Big Chest: BigKey + Keys (assumed)
-//   Crystaroller: BigKey + Keys (assumed)
-//   Eye Bridge x4: BigKey + 3 Keys (assumed) + Lamp + (Cape OR Byrna OR MirrorShield)
-//   Boss (Trinexx): BigKey + 4 Keys (assumed) + Lamp + Fire Rod + Ice Rod
+// TR — Boss (Trinexx): Lamp + Fire Rod + Ice Rod (BigKey + Keys assumed)
 function z3DungeonTR(i) {
-  let n = 1; // compass
-  if (has(i, 'firerod')) n += 2; // roller L+R
-  n += 4; // chain chomps, big key chest, big chest, crystaroller (key-gated, assumed)
-  if (has(i, 'lantern') && (has(i, 'cape') || has(i, 'byrna') || canBlockLasers(i))) {
-    n += 4; // eye bridge x4
-  }
   const boss = (has(i, 'lantern') && has(i, 'firerod') && has(i, 'icerod')) ? STATE.AVAILABLE : STATE.UNAVAIL;
-  if (boss === STATE.AVAILABLE) n += 1;
-  return { chestsReachable: n, boss };
+  return { chestsReachable: 5, boss };
 }
 
-// Ganon's Tower (huge — 27 chests). Simplified count using item gates only.
-//   Bob's Torch: Boots
-//   DM Room x4: Hammer + Hookshot
-//   Map, Firesnake, Bob's Chest, Big Chest, Hope Room x2, Tile Room: various
-//   Big Key Room x3, Mini Helmasaur x2, Pre-Moldorm: tower ascent (BK + Bow + torches)
-//   Moldorm: BK + 4 Keys (assumed) + Bow + torches + Hookshot
+// GT — Boss (Moldorm at top): Bow + canLightTorches + Hookshot + (sword OR hammer)
 function z3DungeonGT(i) {
-  let n = 0;
-  if (has(i, 'boots')) n += 1; // bob's torch
-  if (has(i, 'hammer') && has(i, 'hookshot')) n += 4; // DM room x4
-  // Map chest, firesnake, randomizer room x4: hammer+hookshot (keys assumed)
-  if (has(i, 'hammer') && has(i, 'hookshot')) n += 6;
-  // Hope room x2: unconditional once entered
-  n += 2;
-  // Tile room: Somaria
-  if (has(i, 'somaria')) n += 1;
-  // Compass room x4: Somaria + Fire Rod (right-side path)
-  if (has(i, 'somaria') && has(i, 'firerod')) n += 4;
-  // Bob's Chest, Big Chest: keys + (hammer+hookshot OR somaria+firerod)
-  if ((has(i, 'hammer') && has(i, 'hookshot')) ||
-      (has(i, 'somaria') && has(i, 'firerod'))) n += 2;
-  // Big Key Room x3: keys + (hammer+hookshot OR firerod+somaria) + canBeatArmos
-  const canBeatArmos = (i.sword || 0) >= 1 || has(i, 'hammer') || anyBow(i) ||
-                       (canExtendMagic(i, 2) && (has(i, 'somaria') || has(i, 'byrna'))) ||
-                       (canExtendMagic(i, 4) && (has(i, 'firerod') || has(i, 'icerod')));
-  if (((has(i, 'hammer') && has(i, 'hookshot')) ||
-       (has(i, 'firerod') && has(i, 'somaria'))) && canBeatArmos) n += 3;
-  // Tower ascent (Mini Helmasaur x2 + Pre-Moldorm): Bow + canLightTorches
-  if (anyBow(i) && canLightTorches(i)) n += 3;
-  // Boss (Moldorm): Bow + canLightTorches + Hookshot + canBeatMoldorm
   const canBeatMoldorm = (i.sword || 0) >= 1 || has(i, 'hammer');
   const boss = (anyBow(i) && canLightTorches(i) && has(i, 'hookshot') && canBeatMoldorm)
                ? STATE.AVAILABLE : STATE.UNAVAIL;
-  if (boss === STATE.AVAILABLE) n += 1;
-  return { chestsReachable: n, boss };
+  return { chestsReachable: 20, boss };
 }
 
 // ===========================================================
@@ -2319,31 +2195,31 @@ function z3DungeonGT(i) {
 // ===========================================================
 
 const Z3_DUNGEONS_NEW = {
-  ep: { name: 'Eastern Palace',     region: 'Light World', totalChests: 6,
+  ep: { name: 'Eastern Palace',     region: 'Light World', totalChests: 3,
         entry: z3CanEnterEasternPalace, run: z3DungeonEP, hasMedallion: false },
-  dp: { name: 'Desert Palace',      region: 'Light World', totalChests: 6,
+  dp: { name: 'Desert Palace',      region: 'Light World', totalChests: 2,
         entry: z3CanEnterDesertPalace, run: z3DungeonDP, hasMedallion: false },
-  toh:{ name: 'Tower of Hera',      region: 'Light World', totalChests: 6,
+  toh:{ name: 'Tower of Hera',      region: 'Light World', totalChests: 2,
         entry: z3CanEnterTowerOfHera, run: z3DungeonTOH, hasMedallion: false },
-  hc: { name: 'Hyrule Castle',      region: 'Light World', totalChests: 8,
+  hc: { name: 'Hyrule Castle',      region: 'Light World', totalChests: 6,
         entry: z3CanEnterHyruleCastle, run: z3DungeonHC, hasMedallion: false },
   at: { name: 'Castle Tower',       region: 'Light World', totalChests: 0,
         entry: z3CanEnterCastleTower, run: z3DungeonAT, hasMedallion: false },
-  pod:{ name: 'Palace of Darkness', region: 'Dark World',  totalChests: 14,
+  pod:{ name: 'Palace of Darkness', region: 'Dark World',  totalChests: 5,
         entry: z3CanEnterPalaceOfDarkness, run: z3DungeonPOD, hasMedallion: false },
-  sp: { name: 'Swamp Palace',       region: 'Dark World',  totalChests: 10,
+  sp: { name: 'Swamp Palace',       region: 'Dark World',  totalChests: 6,
         entry: z3CanEnterSwampPalace, run: z3DungeonSP, hasMedallion: false },
-  sw: { name: 'Skull Woods',        region: 'Dark World',  totalChests: 8,
+  sw: { name: 'Skull Woods',        region: 'Dark World',  totalChests: 2,
         entry: z3CanEnterSkullWoods, run: z3DungeonSW, hasMedallion: false },
-  tt: { name: "Thieves' Town",      region: 'Dark World',  totalChests: 8,
+  tt: { name: "Thieves' Town",      region: 'Dark World',  totalChests: 4,
         entry: z3CanEnterThievesTown, run: z3DungeonTT, hasMedallion: false },
-  ip: { name: 'Ice Palace',         region: 'Dark World',  totalChests: 8,
+  ip: { name: 'Ice Palace',         region: 'Dark World',  totalChests: 3,
         entry: z3CanEnterIcePalace, run: z3DungeonIP, hasMedallion: false },
-  mm: { name: 'Misery Mire',        region: 'Dark World',  totalChests: 8,
+  mm: { name: 'Misery Mire',        region: 'Dark World',  totalChests: 2,
         entry: z3CanEnterMiseryMire, run: z3DungeonMM, hasMedallion: true },
-  tr: { name: 'Turtle Rock',        region: 'Dark World',  totalChests: 12,
+  tr: { name: 'Turtle Rock',        region: 'Dark World',  totalChests: 5,
         entry: z3CanEnterTurtleRock, run: z3DungeonTR, hasMedallion: true },
-  gt: { name: "Ganon's Tower",      region: 'Dark World',  totalChests: 27,
+  gt: { name: "Ganon's Tower",      region: 'Dark World',  totalChests: 20,
         entry: z3CanEnterGanonsTower, run: z3DungeonGT, hasMedallion: false },
 };
 
