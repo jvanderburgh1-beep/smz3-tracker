@@ -27,10 +27,16 @@ const IMG_SM = 'images/metroid3/';
 //   Row 4: Bottle    | Somaria   | Byrna    | Cape      | Mirror
 //   Row 5: Sword     | M.Pearl   | Boots    | Flippers  | Glove
 // Bombs are assumed to always be present, so they aren't tracked.
+// Z3 items — order matches the typical Z3 randomizer tracker layout (5 per row).
+// Note: SMZ3 (unlike standalone ALttPR) treats Silver Arrows as an
+// independent inventory item — you can find silvers before finding the
+// bow. You still need both to actually shoot silver arrows in combat.
+// The tracker reflects this by giving Silvers its own cell on row 6
+// (next to Half Magic) so the canonical row 1-5 layout is preserved.
 const Z3_ITEMS = [
   // Row 1 — consumables/throwables
-  { id: 'bow',       kind: 'level', max: 2, label: 'Bow',       glyph: '⤭', tip: 'Bow → Silvers',
-    img: [IMG_Z3+'bow.png', IMG_Z3+'silvers.png'] },
+  { id: 'bow',       kind: 'bool',           label: 'Bow',       glyph: '⤭', tip: 'Bow (any)',
+    img: IMG_Z3+'bow.png' },
   { id: 'boomerang', kind: 'level', max: 2, label: 'Boomer.',   glyph: '↺', tip: 'None → Boomerang 1 → Boomerang 2',
     img: [IMG_Z3+'boomerang1.png', IMG_Z3+'boomerang2.png'] },
   { id: 'hookshot',  kind: 'bool',           label: 'Hookshot', glyph: '⚓', img: IMG_Z3+'hookshot.png' },
@@ -63,9 +69,11 @@ const Z3_ITEMS = [
   { id: 'flippers',  kind: 'bool',           label: 'Flippers', glyph: '~', img: IMG_Z3+'flippers.png' },
   { id: 'glove',     kind: 'level', max: 2, label: 'Glove',     glyph: '✊', tip: 'Power → Titan',
     img: [IMG_Z3+'glove1.png', IMG_Z3+'glove2.png'] },
-  // Row 6 — extras
-  { id: 'halfMagic', kind: 'bool',           label: '½ Magic',  glyph: '½', img: IMG_Z3+'halfmagic.png',
+  // Row 6 — extras (half magic + silvers)
+  { id: 'halfMagic', kind: 'bool',           label: '½ Magic',  glyph: '½', img: IMG_Z3+'mpupgrade.png',
     tip: 'Half Magic — doubles magic supply (used for Cape/Spike Cave reachability and a few dungeon tricks)' },
+  { id: 'silvers',   kind: 'bool',           label: 'Silvers',  glyph: '⤮', tip: 'Silver Arrows — needs Bow to actually use',
+    img: IMG_Z3+'silvers.png' },
 ];
 
 // Super Metroid items — order matches the in-game pause-menu layout (5 per row):
@@ -103,7 +111,7 @@ const SM_ITEMS = [
   { id: 'super',    kind: 'bool',  label: 'Super',   glyph: 'S',  img: IMG_SM+'supermissile.png' },
   { id: 'pb',       kind: 'bool',  label: 'PBomb',   glyph: 'PB', img: IMG_SM+'powerbomb.png' },
   { id: 'etank',    kind: 'level', max: 14, label: 'E-Tank',  glyph: 'E',  img: IMG_SM+'etank.png',  tip: 'Energy tanks (0–14)' },
-  { id: 'reserve',  kind: 'level', max: 4,  label: 'Reserve', glyph: 'R',  img: IMG_SM+'reserve.png', tip: 'Reserve tanks (0–4)' },
+  { id: 'reserve',  kind: 'level', max: 4,  label: 'Reserve', glyph: 'R',  img: IMG_SM+'rtank.png', tip: 'Reserve tanks (0–4)' },
 ];
 
 const SM_BOSSES = [
@@ -150,6 +158,7 @@ function defaultState() {
       glitches: false,
       darkrooms: true,
     },
+    schemaVersion: STATE_SCHEMA_VERSION,
     v: 1,
   };
 }
@@ -161,9 +170,29 @@ function defaultState() {
 // shape of saved data changes meaningfully (e.g. v20 changed every
 // dungeon's totalChests, so any saved s.chests value was stale). We do
 // NOT bump this for cosmetic changes; only for data-shape changes.
-const STATE_SCHEMA_VERSION = 2;
+//
+// v3 (this release): Bow split into independent `bow` (bool) and
+// `silvers` (bool) items. Old saved `bow` was a 0/1/2 level; we
+// translate it to the new bool pair on load.
+const STATE_SCHEMA_VERSION = 3;
 
 let state = loadState();
+
+function migrateItems(parsedItems, savedSchema) {
+  // Start with what was saved
+  const out = { ...parsedItems };
+  // v1/v2 → v3: bow was a 0/1/2 level. New schema has bow:bool and silvers:bool.
+  if (savedSchema < 3) {
+    const oldBow = parsedItems && typeof parsedItems.bow === 'number' ? parsedItems.bow : 0;
+    out.bow = oldBow >= 1;
+    out.silvers = oldBow >= 2;
+  } else {
+    // Already v3+: just coerce to bool defensively (in case someone hand-edited)
+    if (typeof out.bow !== 'boolean') out.bow = !!out.bow;
+    if (typeof out.silvers !== 'boolean') out.silvers = !!out.silvers;
+  }
+  return out;
+}
 
 function loadState() {
   try {
@@ -173,8 +202,12 @@ function loadState() {
     const savedSchema = parsed.schemaVersion || 1;
     // merge with defaults in case new items were added across versions
     const def = defaultState();
+    // Run item-level migrations BEFORE merging with defaults so we
+    // override defaults with the migrated values rather than the raw
+    // parsed values.
+    const migratedItems = migrateItems(parsed.items || {}, savedSchema);
     const merged = {
-      items:    { ...def.items, ...parsed.items },
+      items:    { ...def.items, ...migratedItems },
       dungeons: mergeDungeons(def.dungeons, parsed.dungeons || {}, savedSchema),
       checked:  parsed.checked || {},
       smBossPrizes: parsed.smBossPrizes || {},
@@ -929,8 +962,14 @@ function renderMapMarkers(mapKey) {
 
     m.addEventListener('click', () => {
       if (isDungeon) {
-        // Jump to Dungeons tab so the user can toggle chests/boss/prize.
-        switchToTab('dungeons');
+        // Jump to the merged Items tab (which now hosts the boss grid)
+        // and scroll the dungeons section into view so the user can
+        // toggle chests/boss/prize without having to find it.
+        switchToTab('items');
+        const target = document.getElementById('z3-dungeons');
+        if (target && target.scrollIntoView) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
       } else {
         state.checked[id] = !state.checked[id];
         saveState();
@@ -978,8 +1017,9 @@ function rerenderAll() {
 
 /* ---------- Tabs ---------- */
 
-// Switch the main top-level tab (items / dungeons / locations).
-// Exposed so map markers can jump to Dungeons tab on tap.
+// Switch the main top-level tab (items / locations as of v32).
+// Exposed so map markers can jump to the Items tab (which now hosts
+// the merged dungeon grid) when a dungeon marker is tapped.
 function switchToTab(key) {
   document.querySelectorAll('.tab').forEach(t => {
     const isActive = t.dataset.tab === key;

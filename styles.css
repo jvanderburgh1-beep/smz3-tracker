@@ -170,7 +170,7 @@ main {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 2px;
-  max-width: 176px;
+  max-width: 140px;
   margin-left: 0;  /* left-aligned so the grid sits in a tidy block */
 }
 .item-grid.compact {
@@ -189,7 +189,7 @@ main {
 .item {
   position: relative;
   aspect-ratio: 1 / 1;
-  min-height: 30px;
+  min-height: 24px;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -299,12 +299,13 @@ main {
 .boss-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  max-width: 520px;
-  margin: 0 auto;
+  gap: 6px;
+  /* Halved from 520px so the smaller cells don't stretch wide on desktop */
+  max-width: 280px;
+  margin: 0;  /* left-align with the item grids above */
 }
-@media (min-width: 420px) { .boss-grid { grid-template-columns: repeat(5, 1fr); } }
-@media (min-width: 600px) { .boss-grid { grid-template-columns: repeat(6, 1fr); } }
+@media (min-width: 420px) { .boss-grid { grid-template-columns: repeat(5, 1fr); max-width: 340px; } }
+@media (min-width: 600px) { .boss-grid { grid-template-columns: repeat(6, 1fr); max-width: 400px; } }
 
 .boss-cell {
   position: relative;
@@ -313,7 +314,8 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 72px;
+  /* Halved from 72px per v32 — boss sprites are now ~50% smaller */
+  min-height: 36px;
   transition: transform .08s;
 }
 .boss-cell:active { transform: scale(0.95); }
@@ -372,18 +374,20 @@ main {
 }
 .boss-overlay:active { transform: scale(0.85); }
 
-/* Chest counter (bottom-left) */
+/* Chest counter (bottom-left).
+   Scaled down for v32 along with the smaller boss cells — keeps the
+   overlay proportional to the sprite (~half the previous size). */
 .boss-chests {
-  left: -3px;
-  bottom: -3px;
-  min-width: 29px;
-  height: 29px;
-  padding: 0 7px;
-  font-size: 16px;
+  left: -2px;
+  bottom: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
   background: var(--accent);
   color: var(--bg);
-  border-radius: 14px;
-  box-shadow: 0 0 0 2px var(--bg);
+  border-radius: 8px;
+  box-shadow: 0 0 0 1.5px var(--bg);
 }
 .boss-chests.empty { background: var(--text-faint); opacity: 0.5; }
 
@@ -392,12 +396,12 @@ main {
    When the image fails to load, background falls back to a neutral
    disc and the cell uses the glyph text. */
 .boss-prize {
-  right: -3px;
-  bottom: -3px;
-  width: 34px;
-  height: 34px;
+  right: -2px;
+  bottom: -2px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  font-size: 14px;
+  font-size: 9px;
   background: transparent;
   color: var(--text-faint);
   overflow: visible;
@@ -428,10 +432,10 @@ main {
 .boss-med {
   right: -2px;
   top: -2px;
-  width: 26px;
-  height: 26px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  font-size: 11px;
+  font-size: 8px;
   background: transparent;
   color: var(--text-faint);
   padding: 0;

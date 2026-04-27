@@ -32,9 +32,13 @@ function sword(items)   { return items.sword || 0; }
 function masterSword(items) { return sword(items) >= 2; }
 function tempered(items)    { return sword(items) >= 3; }
 
-// Bow state (0=none, 1=bow, 2=silvers). Silvers implies bow.
-function anyBow(items)   { return (items.bow || 0) >= 1; }
-function silvers(items)  { return (items.bow || 0) >= 2; }
+// Bow / Silver Arrows — in SMZ3 (unlike standalone ALttPR) Silver Arrows
+// are a separate inventory item, so the player can find silvers before
+// finding the bow. To actually USE silvers in combat you still need both.
+//   anyBow(items)   = "can shoot regular arrows" — needs bow only
+//   silvers(items)  = "can shoot silver arrows"  — needs bow AND silvers
+function anyBow(items)   { return !!items.bow; }
+function silvers(items)  { return !!items.bow && !!items.silvers; }
 
 // Glove (0=none, 1=power, 2=titan)
 function anyGlove(items) { return (items.glove || 0) >= 1; }
