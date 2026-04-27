@@ -670,13 +670,23 @@ main {
 }
 
 /* SM map has 100 markers in a smaller area — shrink them so they
-   don't completely hide the map underneath. */
+   don't completely hide the map underneath. Tap target is also kept
+   tight (only 2px padding) so that adjacent markers in dense clusters
+   like green Brinstar don't have overlapping hit areas. With pinch-
+   zoom available the player can zoom in for precision tapping. */
 #markers-sm .map-marker {
-  width: 9px;
-  height: 9px;
-  margin-left: -4.5px;
-  margin-top: -4.5px;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  margin-top: -3.5px;
   border-width: 1px;
+}
+#markers-sm .map-marker::before {
+  /* Override the default -8px tap-target padding for SM only.
+     -2px keeps the tap target ~11x11 — about a finger pad's
+     worth of tolerance, but no overlap unless markers are <4px
+     apart on screen. Use pinch-zoom for tight clusters. */
+  inset: -2px;
 }
 
 /* Tap target is bigger than the visible marker so fingers don't miss.
