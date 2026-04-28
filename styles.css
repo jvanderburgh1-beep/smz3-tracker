@@ -330,8 +330,10 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Halved from 72px per v32 — boss sprites are now ~50% smaller */
-  min-height: 36px;
+  /* v35: shrunk from 36px so chest/prize overlays carry more visual
+     weight (they're the things you actually tap often). The boss
+     sprite itself stays as a visual anchor. */
+  min-height: 28px;
   transition: transform .08s;
 }
 .boss-cell:active { transform: scale(0.95); }
@@ -391,18 +393,18 @@ main {
 .boss-overlay:active { transform: scale(0.85); }
 
 /* Chest counter (bottom-left).
-   Scaled down for v32 along with the smaller boss cells — keeps the
-   overlay proportional to the sprite (~half the previous size). */
+   Bumped up in v35 — these are tapped often and the v32 size was
+   hard to read on the smaller boss cells. */
 .boss-chests {
-  left: -2px;
-  bottom: -2px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  font-size: 10px;
+  left: -3px;
+  bottom: -3px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  font-size: 14px;
   background: var(--accent);
   color: var(--bg);
-  border-radius: 8px;
+  border-radius: 11px;
   box-shadow: 0 0 0 1.5px var(--bg);
 }
 .boss-chests.empty { background: var(--text-faint); opacity: 0.5; }
@@ -412,12 +414,12 @@ main {
    When the image fails to load, background falls back to a neutral
    disc and the cell uses the glyph text. */
 .boss-prize {
-  right: -2px;
-  bottom: -2px;
-  width: 18px;
-  height: 18px;
+  right: -3px;
+  bottom: -3px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  font-size: 9px;
+  font-size: 11px;
   background: transparent;
   color: var(--text-faint);
   overflow: visible;
@@ -448,10 +450,10 @@ main {
 .boss-med {
   right: -2px;
   top: -2px;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  font-size: 8px;
+  font-size: 10px;
   background: transparent;
   color: var(--text-faint);
   padding: 0;

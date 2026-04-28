@@ -6,7 +6,7 @@
      speed and offline use.
    ============================================================= */
 
-const CACHE_VERSION = 'smz3-tracker-v34';
+const CACHE_VERSION = 'smz3-tracker-v35';
 const CORE_ASSETS = [
   './',
   './index.html',
