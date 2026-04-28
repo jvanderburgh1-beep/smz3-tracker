@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=32">
+  <link rel="stylesheet" href="styles.css?v=34">
   <title>SMZ3 Tracker</title>
 </head>
 <body>
@@ -40,27 +40,21 @@
 <main>
 
 <!-- ============ ITEMS + DUNGEONS TAB ============ -->
-<!-- v32: Items and Dungeons merged into one tab. The previous "Items"
-     and "Dungeons" panels were always-related anyway; combining lets the
-     player scroll to see everything in one view. Section headers and the
-     dungeon-legend strip are dropped — experienced runners don't need
-     them and removing them gives more room for the actual sprites. -->
+<!-- v33: Items column on the left, bosses column on the right.
+     Items column stacks Z3 items above SM items. Bosses column
+     stacks Z3 dungeon bosses above SM bosses. Two columns side
+     by side, not paired by game. -->
 <section class="panel" id="panel-items" data-panel="items">
 
-  <div class="section">
-    <div class="item-grid" id="z3-items"></div>
-  </div>
-
-  <div class="section">
-    <div class="item-grid" id="sm-items"></div>
-  </div>
-
-  <div class="section">
-    <div class="boss-grid" id="z3-dungeons"></div>
-  </div>
-
-  <div class="section">
-    <div class="boss-grid" id="sm-boss-grid"></div>
+  <div class="section section-row">
+    <div class="items-col">
+      <div class="item-grid" id="z3-items"></div>
+      <div class="item-grid" id="sm-items"></div>
+    </div>
+    <div class="bosses-col">
+      <div class="boss-grid" id="z3-dungeons"></div>
+      <div class="boss-grid" id="sm-boss-grid"></div>
+    </div>
   </div>
 
 </section>
@@ -163,8 +157,8 @@
   </div>
 </div>
 
-<script src="logic.js?v=32"></script>
-<script src="tracker.js?v=32"></script>
+<script src="logic.js?v=34"></script>
+<script src="tracker.js?v=34"></script>
 <script>
   // Kill-switch: visiting `?reset=1` unregisters every service worker
   // for this scope and deletes every cache, then reloads onto a clean

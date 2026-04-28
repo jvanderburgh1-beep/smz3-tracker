@@ -143,6 +143,22 @@ main {
 .panel.hidden { display: none; }
 
 .section { margin-top: 18px; }
+
+/* v33: side-by-side items + bosses layout. The row holds two columns,
+   not paired by game — items stack on the left (Z3 above SM), bosses
+   stack on the right (Z3 dungeons above SM bosses). align-items:
+   flex-start so each column hugs the top of the row. */
+.section-row {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: flex-start;
+}
+.items-col, .bosses-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 .section-title {
   font-family: var(--font-display);
   font-size: 13px;
